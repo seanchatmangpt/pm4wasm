@@ -24,7 +24,7 @@
 /// - Generating training data for ML models
 /// - Validating discovered models
 use crate::event_log::{Event, EventLog, Trace};
-use crate::process_tree::{PtOperator, ProcessTree};
+use crate::process_tree::{ProcessTree, PtOperator};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -193,7 +193,7 @@ fn execute_process_tree(pt: &ProcessTree) -> Vec<String> {
             PtOperator::Loop => {
                 // Loop: do, redo, exit (children[0], children[1], children[2])
                 // For basic playout, execute do once, then maybe redo
-                if vertex.children.len() >= 1 {
+                if !vertex.children.is_empty() {
                     let mut rng = rand::thread_rng();
 
                     // Execute do branch
@@ -279,6 +279,7 @@ pub fn play_out_process_tree(pt: &ProcessTree, params: &PlayOutParameters) -> Ev
 
 /// DFG structure for playout.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct DirectedGraph {
     /// All activities in the graph.
     pub activities: Vec<String>,
@@ -286,14 +287,6 @@ pub struct DirectedGraph {
     pub adj: HashMap<String, Vec<String>>,
 }
 
-impl Default for DirectedGraph {
-    fn default() -> Self {
-        Self {
-            activities: Vec::new(),
-            adj: HashMap::new(),
-        }
-    }
-}
 
 /// Generate an event log by playout of a directly-follows graph.
 ///
@@ -473,7 +466,8 @@ mod tests {
     fn test_play_out_dfg_simple() {
         // A -> B -> C
         let mut dfg = DirectedGraph::default();
-        dfg.activities.extend(["A", "B", "C"].map(|s| s.to_string()));
+        dfg.activities
+            .extend(["A", "B", "C"].map(|s| s.to_string()));
         dfg.adj.insert("A".to_string(), vec!["B".to_string()]);
         dfg.adj.insert("B".to_string(), vec!["C".to_string()]);
 

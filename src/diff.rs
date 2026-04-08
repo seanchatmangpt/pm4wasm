@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::footprints::{self, ActivityPairs, Footprints};
+use crate::powl::{PowlArena, PowlNode};
 /// Structural and behavioral diff between two POWL models.
 ///
 /// Compares two models along three axes:
@@ -24,8 +26,6 @@
 /// The result is a typed [`ModelDiff`] suitable for driving UI highlights,
 /// change-log generation, or automated regression detection.
 use serde::{Deserialize, Serialize};
-use crate::footprints::{self, Footprints, ActivityPairs};
-use crate::powl::{PowlArena, PowlNode};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +123,11 @@ impl ModelDiff {
 fn node_type_str(arena: &PowlArena, idx: u32) -> String {
     match arena.get(idx) {
         Some(PowlNode::Transition(t)) => {
-            if t.label.is_some() { "Transition".into() } else { "tau".into() }
+            if t.label.is_some() {
+                "Transition".into()
+            } else {
+                "tau".into()
+            }
         }
         Some(PowlNode::FrequentTransition(_)) => "FrequentTransition".into(),
         Some(PowlNode::StrictPartialOrder(_)) => "StrictPartialOrder".into(),
@@ -188,26 +192,33 @@ fn structural_diff(
 // ─── Main entry point ─────────────────────────────────────────────────────────
 
 /// Compute the diff between model A (`arena_a`, `root_a`) and model B (`arena_b`, `root_b`).
-pub fn diff(
-    arena_a: &PowlArena,
-    root_a: u32,
-    arena_b: &PowlArena,
-    root_b: u32,
-) -> ModelDiff {
+pub fn diff(arena_a: &PowlArena, root_a: u32, arena_b: &PowlArena, root_b: u32) -> ModelDiff {
     let fp_a = footprints::apply(arena_a, root_a);
     let fp_b = footprints::apply(arena_b, root_b);
 
-    let added_activities: Vec<String> = fp_b.activities.difference(&fp_a.activities)
-        .cloned().collect();
-    let removed_activities: Vec<String> = fp_a.activities.difference(&fp_b.activities)
-        .cloned().collect();
+    let added_activities: Vec<String> = fp_b
+        .activities
+        .difference(&fp_a.activities)
+        .cloned()
+        .collect();
+    let removed_activities: Vec<String> = fp_a
+        .activities
+        .difference(&fp_b.activities)
+        .cloned()
+        .collect();
 
     // Always-happening changes
     let mut always_changes = Vec::new();
-    for act in fp_b.activities_always_happening.difference(&fp_a.activities_always_happening) {
+    for act in fp_b
+        .activities_always_happening
+        .difference(&fp_a.activities_always_happening)
+    {
         always_changes.push(AlwaysChange::BecameMandatory(act.clone()));
     }
-    for act in fp_a.activities_always_happening.difference(&fp_b.activities_always_happening) {
+    for act in fp_a
+        .activities_always_happening
+        .difference(&fp_b.activities_always_happening)
+    {
         always_changes.push(AlwaysChange::BecameOptional(act.clone()));
     }
 
@@ -250,11 +261,17 @@ pub fn diff(
 
     // Structural changes
     let mut structure_changes = Vec::new();
-    structural_diff(arena_a, root_a, arena_b, root_b, "root", &mut structure_changes);
+    structural_diff(
+        arena_a,
+        root_a,
+        arena_b,
+        root_b,
+        "root",
+        &mut structure_changes,
+    );
 
     // Trace length delta
-    let min_trace_length_delta =
-        fp_b.min_trace_length as i64 - fp_a.min_trace_length as i64;
+    let min_trace_length_delta = fp_b.min_trace_length as i64 - fp_a.min_trace_length as i64;
 
     // Severity
     let severity = if !removed_activities.is_empty()

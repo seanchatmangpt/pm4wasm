@@ -269,7 +269,7 @@ fn eliminate_identical_places(net: &mut PetriNet) -> bool {
     }
 
     // Find a group with more than one place.
-    for (_sig, group) in &sig_map {
+    for group in sig_map.values() {
         if group.len() > 1 {
             // Keep the first, remove the rest.
             let _keep = &group[0];
@@ -330,10 +330,7 @@ fn count_series_transitions(net: &PetriNet) -> usize {
         }
         let in_places = preset_places(net, &trans.name);
         let out_places = postset_places(net, &trans.name);
-        if in_places.len() == 1
-            && out_places.len() == 1
-            && in_places[0] != out_places[0]
-        {
+        if in_places.len() == 1 && out_places.len() == 1 && in_places[0] != out_places[0] {
             count += 1;
         }
     }

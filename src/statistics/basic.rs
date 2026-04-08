@@ -111,8 +111,9 @@ pub fn get_event_attributes(log: &EventLog) -> Vec<AttributeSummary> {
     for trace in &log.traces {
         for event in &trace.events {
             for key in event.attributes.keys() {
-                let (count, values) =
-                    attr_stats.entry(key.clone()).or_insert((0, std::collections::HashSet::new()));
+                let (count, values) = attr_stats
+                    .entry(key.clone())
+                    .or_insert((0, std::collections::HashSet::new()));
                 *count += 1;
                 if let Some(val) = event.attributes.get(key) {
                     values.insert(val.clone());
@@ -250,17 +251,18 @@ pub fn get_attribute_values(log: &EventLog, attribute_key: &str) -> Vec<Attribut
                 *freq.entry(val.clone()).or_insert(0) += 1;
             }
             // Also check standard fields
-            match attribute_key {
-                "concept:name" => {
-                    *freq.entry(event.name.clone()).or_insert(0) += 1;
-                }
-                _ => {}
+            if attribute_key == "concept:name" {
+                *freq.entry(event.name.clone()).or_insert(0) += 1;
             }
         }
     }
     let mut result: Vec<AttributeValue> = freq
         .into_iter()
-        .map(|(value, count)| AttributeValue { attribute: attribute_key.to_string(), value, count })
+        .map(|(value, count)| AttributeValue {
+            attribute: attribute_key.to_string(),
+            value,
+            count,
+        })
         .collect();
     result.sort_by(|a, b| b.count.cmp(&a.count));
     result
@@ -360,8 +362,14 @@ pub fn get_minimum_self_distances(log: &EventLog) -> Vec<MinSelfDistance> {
         for window in trace.events.windows(2) {
             if window[0].name == window[1].name {
                 if let (Some(ts1), Some(ts2)) = (
-                    window[0].timestamp.as_ref().and_then(|t| parse_timestamp(t)),
-                    window[1].timestamp.as_ref().and_then(|t| parse_timestamp(t)),
+                    window[0]
+                        .timestamp
+                        .as_ref()
+                        .and_then(|t| parse_timestamp(t)),
+                    window[1]
+                        .timestamp
+                        .as_ref()
+                        .and_then(|t| parse_timestamp(t)),
                 ) {
                     if ts2 > ts1 {
                         let dist = ts2 - ts1;
@@ -377,7 +385,10 @@ pub fn get_minimum_self_distances(log: &EventLog) -> Vec<MinSelfDistance> {
     let mut result: Vec<MinSelfDistance> = min_dist
         .into_iter()
         .filter(|(_, d)| *d != i64::MAX)
-        .map(|(activity, min_distance_ms)| MinSelfDistance { activity, min_distance_ms })
+        .map(|(activity, min_distance_ms)| MinSelfDistance {
+            activity,
+            min_distance_ms,
+        })
         .collect();
     result.sort_by(|a, b| a.activity.cmp(&b.activity));
     result
@@ -410,12 +421,20 @@ pub fn get_case_overlap(log: &EventLog) -> f64 {
 
     let mut prefix_counts: HashMap<Vec<String>, usize> = HashMap::new();
     for trace in &log.traces {
-        let prefix: Vec<String> = trace.events.iter().take(min_len).map(|e| e.name.clone()).collect();
+        let prefix: Vec<String> = trace
+            .events
+            .iter()
+            .take(min_len)
+            .map(|e| e.name.clone())
+            .collect();
         *prefix_counts.entry(prefix).or_insert(0) += 1;
     }
 
     // Overlap = sum of (count/total)^2 for each prefix
-    let overlap: f64 = prefix_counts.values().map(|&c| (c as f64 / total as f64).powi(2)).sum();
+    let overlap: f64 = prefix_counts
+        .values()
+        .map(|&c| (c as f64 / total as f64).powi(2))
+        .sum();
     overlap
 }
 
@@ -438,7 +457,11 @@ pub fn get_prefixes_from_log(log: &EventLog) -> Vec<PrefixInfo> {
         .map(|(prefix, count)| PrefixInfo {
             prefix,
             count,
-            percentage: if total_prefixes > 0 { count as f64 / total_prefixes as f64 * 100.0 } else { 0.0 },
+            percentage: if total_prefixes > 0 {
+                count as f64 / total_prefixes as f64 * 100.0
+            } else {
+                0.0
+            },
         })
         .collect();
     result.sort_by(|a, b| b.count.cmp(&a.count));
@@ -469,7 +492,11 @@ pub fn get_trace_attribute_values(log: &EventLog, attribute_key: &str) -> Vec<At
     }
     let mut result: Vec<AttributeValue> = freq
         .into_iter()
-        .map(|(value, count)| AttributeValue { attribute: attribute_key.to_string(), value, count })
+        .map(|(value, count)| AttributeValue {
+            attribute: attribute_key.to_string(),
+            value,
+            count,
+        })
         .collect();
     result.sort_by(|a, b| b.count.cmp(&a.count));
     result
@@ -504,8 +531,16 @@ pub fn get_variants_paths_duration(log: &EventLog) -> Vec<VariantDuration> {
     for trace in &log.traces {
         let seq: Vec<String> = trace.events.iter().map(|e| e.name.clone()).collect();
         if let (Some(first_ts), Some(last_ts)) = (
-            trace.events.first().and_then(|e| e.timestamp.as_ref()).and_then(|t| parse_timestamp(t)),
-            trace.events.last().and_then(|e| e.timestamp.as_ref()).and_then(|t| parse_timestamp(t)),
+            trace
+                .events
+                .first()
+                .and_then(|e| e.timestamp.as_ref())
+                .and_then(|t| parse_timestamp(t)),
+            trace
+                .events
+                .last()
+                .and_then(|e| e.timestamp.as_ref())
+                .and_then(|t| parse_timestamp(t)),
         ) {
             if last_ts > first_ts {
                 durations_by_variant
@@ -519,7 +554,10 @@ pub fn get_variants_paths_duration(log: &EventLog) -> Vec<VariantDuration> {
     variant_map
         .into_iter()
         .map(|(activities, count)| {
-            let durs = durations_by_variant.get(&activities).map(|v| v.as_slice()).unwrap_or(&[]);
+            let durs = durations_by_variant
+                .get(&activities)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
             VariantDuration {
                 activities,
                 count,
@@ -528,7 +566,9 @@ pub fn get_variants_paths_duration(log: &EventLog) -> Vec<VariantDuration> {
                 max_duration_ms: durs.last().copied().unwrap_or(0),
                 avg_duration_ms: if !durs.is_empty() {
                     durs.iter().copied().map(|d| d as f64).sum::<f64>() / durs.len() as f64
-                } else { 0.0 },
+                } else {
+                    0.0
+                },
             }
         })
         .collect()
@@ -635,7 +675,7 @@ mod tests {
         let log = make_test_log();
         let variants = get_variants(&log);
         assert_eq!(variants.len(), 3); // A,B | A,B,C | A,C
-        // Each variant has count 1
+                                       // Each variant has count 1
         for v in &variants {
             assert_eq!(v.count, 1);
         }

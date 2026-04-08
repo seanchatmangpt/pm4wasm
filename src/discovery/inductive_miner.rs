@@ -20,10 +20,9 @@
 /// which works directly on the directly-follows graph rather than UVCL.
 ///
 /// Mirrors `pm4py.discover_process_tree_inductive()`.
-
 use crate::discovery::dfg::discover_dfg;
 use crate::event_log::EventLog;
-use crate::process_tree::{PtOperator, ProcessTree};
+use crate::process_tree::{ProcessTree, PtOperator};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 // ─── DFG helper ────────────────────────────────────────────────────────────────
@@ -51,16 +50,9 @@ impl InductiveDFG {
             .into_iter()
             .map(|e| ((e.source, e.target), e.count))
             .collect();
-        let start_activities: HashMap<String, usize> = dfg
-            .start_activities
-            .into_iter()
-            .collect();
+        let start_activities: HashMap<String, usize> = dfg.start_activities.into_iter().collect();
         let end_activities: HashMap<String, usize> = dfg.end_activities.into_iter().collect();
-        let alphabet: Vec<String> = dfg
-            .activities
-            .into_iter()
-            .map(|(a, _)| a)
-            .collect();
+        let alphabet: Vec<String> = dfg.activities.into_iter().map(|(a, _)| a).collect();
         let skip = log.traces.iter().any(|t| t.events.is_empty());
         InductiveDFG {
             graph,
@@ -93,7 +85,7 @@ impl InductiveDFG {
         let mut queue = VecDeque::new();
         queue.push_back(node.to_string());
         while let Some(current) = queue.pop_front() {
-            for ((src, tgt), _) in &self.graph {
+            for (src, tgt) in self.graph.keys() {
                 if src == &current && !visited.contains(tgt) {
                     visited.insert(tgt.clone());
                     queue.push_back(tgt.clone());
@@ -109,7 +101,7 @@ impl InductiveDFG {
         let mut queue = VecDeque::new();
         queue.push_back(node.to_string());
         while let Some(current) = queue.pop_front() {
-            for ((src, tgt), _) in &self.graph {
+            for (src, tgt) in self.graph.keys() {
                 if tgt == &current && !visited.contains(src) {
                     visited.insert(src.clone());
                     queue.push_back(src.clone());
@@ -165,7 +157,7 @@ impl InductiveDFG {
             queue.push_back(v.clone());
             while let Some(current) = queue.pop_front() {
                 if component.insert(current.clone()) {
-                    for ((src, tgt), _) in &self.graph {
+                    for (src, tgt) in self.graph.keys() {
                         if src == &current && !component.contains(tgt) {
                             queue.push_back(tgt.clone());
                         }
@@ -337,19 +329,17 @@ fn detect_sequence_cut(dfg: &InductiveDFG) -> Option<CutResult> {
     });
 
     // Validate: for each pair of consecutive groups, there should be edges from earlier to later
-    let valid = groups
-        .windows(2)
-        .all(|w| {
-            let earlier = &w[0];
-            let later = &w[1];
-            // At least some activity in earlier reaches some activity in later
-            earlier.iter().any(|a| {
-                successors_map
-                    .get(a)
-                    .map(|s| s.iter().any(|b| later.contains(b)))
-                    .unwrap_or(false)
-            })
-        });
+    let valid = groups.windows(2).all(|w| {
+        let earlier = &w[0];
+        let later = &w[1];
+        // At least some activity in earlier reaches some activity in later
+        earlier.iter().any(|a| {
+            successors_map
+                .get(a)
+                .map(|s| s.iter().any(|b| later.contains(b)))
+                .unwrap_or(false)
+        })
+    });
 
     if valid {
         Some(CutResult {
@@ -477,16 +467,10 @@ fn detect_loop_cut(dfg: &InductiveDFG) -> Option<CutResult> {
     for a in &remaining {
         sub_graph.insert(a.to_string(), Vec::new());
     }
-    for ((src, tgt), _) in &dfg.graph {
+    for (src, tgt) in dfg.graph.keys() {
         if remaining.contains(src.as_str()) && remaining.contains(tgt.as_str()) {
-            sub_graph
-                .entry(src.clone())
-                .or_default()
-                .push(tgt.clone());
-            sub_graph
-                .entry(tgt.clone())
-                .or_default()
-                .push(src.clone());
+            sub_graph.entry(src.clone()).or_default().push(tgt.clone());
+            sub_graph.entry(tgt.clone()).or_default().push(src.clone());
         }
     }
 
@@ -579,10 +563,7 @@ pub fn inductive_miner(log: &EventLog) -> ProcessTree {
     // Handle empty traces first
     if dfg.skip {
         let tau = ProcessTree::leaf(None);
-        let non_empty = mine_dfg(&InductiveDFG {
-            skip: false,
-            ..dfg
-        });
+        let non_empty = mine_dfg(&InductiveDFG { skip: false, ..dfg });
         return ProcessTree::internal(PtOperator::Xor, vec![tau, non_empty]);
     }
 
@@ -671,11 +652,7 @@ pub fn simplify_tree(tree: ProcessTree) -> ProcessTree {
     match tree.operator {
         None => tree, // leaf
         Some(op) => {
-            let children: Vec<ProcessTree> = tree
-                .children
-                .into_iter()
-                .map(simplify_tree)
-                .collect();
+            let children: Vec<ProcessTree> = tree.children.into_iter().map(simplify_tree).collect();
 
             // Flatten: if child has same operator, absorb its children
             let mut flat_children = Vec::new();
@@ -763,7 +740,11 @@ mod tests {
         .unwrap();
         let tree = inductive_miner(&log);
         let repr = tree.to_repr();
-        assert!(repr.contains("->"), "Expected sequence operator, got: {}", repr);
+        assert!(
+            repr.contains("->"),
+            "Expected sequence operator, got: {}",
+            repr
+        );
     }
 
     #[test]
@@ -793,7 +774,11 @@ mod tests {
         .unwrap();
         let tree = inductive_miner(&log);
         let repr = tree.to_repr();
-        assert!(repr.contains("+"), "Expected parallel operator, got: {}", repr);
+        assert!(
+            repr.contains("+"),
+            "Expected parallel operator, got: {}",
+            repr
+        );
     }
 
     #[test]

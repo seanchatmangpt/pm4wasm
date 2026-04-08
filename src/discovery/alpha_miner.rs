@@ -30,7 +30,6 @@
 ///
 /// **Time Complexity**: O(n²) where n is the number of distinct activities
 /// **Space Complexity**: O(n²) for the relation matrices
-
 use crate::event_log::EventLog;
 use crate::petri_net::{Marking, PetriNet, PetriNetResult};
 use std::collections::{HashMap, HashSet};
@@ -62,7 +61,9 @@ pub fn alpha_miner(log: &EventLog) -> PetriNetResult {
         return empty_net();
     }
 
-    let all_activities: HashSet<String> = dfg.keys().cloned()
+    let all_activities: HashSet<String> = dfg
+        .keys()
+        .cloned()
         .chain(dfg.values().flat_map(|v| v.iter().cloned()))
         .collect();
 
@@ -152,8 +153,8 @@ fn compute_causal(
             if a == b {
                 continue;
             }
-            let a_to_b = dfg.get(a).map_or(false, |s| s.contains(b));
-            let b_to_a = dfg.get(b).map_or(false, |s| s.contains(a));
+            let a_to_b = dfg.get(a).is_some_and(|s| s.contains(b));
+            let b_to_a = dfg.get(b).is_some_and(|s| s.contains(a));
             if a_to_b && !b_to_a {
                 causal.insert((a.clone(), b.clone()));
             }
@@ -179,9 +180,7 @@ fn compute_parallel(
 /// Derive internal places from causal matrix.
 /// For each pair (a, b) in causal, create a place a→b.
 /// Then merge places with identical input/output sets.
-fn derive_places(
-    causal: &HashSet<(String, String)>,
-) -> Vec<(String, String)> {
+fn derive_places(causal: &HashSet<(String, String)>) -> Vec<(String, String)> {
     // Simple approach: one place per causal pair
     // Advanced approach: merge places with same preset/postset
     let mut places: Vec<(String, String)> = causal.iter().cloned().collect();

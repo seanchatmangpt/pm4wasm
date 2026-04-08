@@ -21,7 +21,6 @@
 /// via token replay against the event log.
 ///
 /// Reference: M.J. Frank. "Optimising and Implementing the Genetic Miner in PM4Py" (2026).
-
 use crate::conformance::token_replay::compute_fitness;
 use crate::discovery::dfg::discover_dfg;
 use crate::event_log::EventLog;
@@ -80,7 +79,11 @@ struct Rng {
 impl Rng {
     fn new(seed: u64) -> Self {
         Rng {
-            state: if seed == 0 { 0xDEAD_BEEF_CAFE_BABE } else { seed },
+            state: if seed == 0 {
+                0xDEAD_BEEF_CAFE_BABE
+            } else {
+                seed
+            },
         }
     }
 
@@ -159,15 +162,15 @@ fn build_dfg_net(log: &EventLog, rng: &mut Rng) -> Individual {
     }
 
     // For activities with no outgoing DFG edge place, add an arc to sink
-    let has_outgoing: HashSet<String> = edge_places
-        .keys()
-        .map(|(s, _)| s.clone())
-        .collect();
+    let has_outgoing: HashSet<String> = edge_places.keys().map(|(s, _)| s.clone()).collect();
     for act in &activities {
         if !has_outgoing.contains(act) && !dfg.end_activities.iter().any(|(a, _)| a == act) {
             let t_name = format!("t_{}", act);
             // Avoid duplicate arcs
-            let already_to_sink = net.arcs.iter().any(|a| a.source == t_name && a.target == sink);
+            let already_to_sink = net
+                .arcs
+                .iter()
+                .any(|a| a.source == t_name && a.target == sink);
             if !already_to_sink {
                 net.add_arc(&t_name, &sink);
             }
@@ -175,14 +178,14 @@ fn build_dfg_net(log: &EventLog, rng: &mut Rng) -> Individual {
     }
 
     // For activities with no incoming DFG edge place, add an arc from source
-    let has_incoming: HashSet<String> = edge_places
-        .keys()
-        .map(|(_, t)| t.clone())
-        .collect();
+    let has_incoming: HashSet<String> = edge_places.keys().map(|(_, t)| t.clone()).collect();
     for act in &activities {
         if !has_incoming.contains(act) && !dfg.start_activities.iter().any(|(a, _)| a == act) {
             let t_name = format!("t_{}", act);
-            let already_from_source = net.arcs.iter().any(|a| a.source == source && a.target == t_name);
+            let already_from_source = net
+                .arcs
+                .iter()
+                .any(|a| a.source == source && a.target == t_name);
             if !already_from_source {
                 net.add_arc(&source, &t_name);
             }
@@ -235,7 +238,11 @@ fn evaluate_fitness(individual: &Individual, log: &EventLog) -> f64 {
     // Simplicity: inversely proportional to net size.
     // More places/transitions = lower simplicity score.
     let total_elements = individual.net.places.len() + individual.net.transitions.len();
-    let simplicity = if total_elements == 0 { 0.0 } else { 1.0 / (1.0 + total_elements as f64 * 0.05) };
+    let simplicity = if total_elements == 0 {
+        0.0
+    } else {
+        1.0 / (1.0 + total_elements as f64 * 0.05)
+    };
 
     0.6 * avg_trace_fitness + 0.3 * fitting_ratio + 0.1 * simplicity
 }
@@ -246,7 +253,11 @@ fn evaluate_fitness(individual: &Individual, log: &EventLog) -> f64 {
 /// a random subset of places from each parent (including their incident
 /// arcs). This creates offspring that inherit connectivity patterns from
 /// both parents while potentially discovering new structures.
-fn crossover(parent1: &Individual, parent2: &Individual, rng: &mut Rng) -> (Individual, Individual) {
+fn crossover(
+    parent1: &Individual,
+    parent2: &Individual,
+    rng: &mut Rng,
+) -> (Individual, Individual) {
     let mut child1 = PetriNet::new("genetic_child1");
     let mut child2 = PetriNet::new("genetic_child2");
 
@@ -270,10 +281,34 @@ fn crossover(parent1: &Individual, parent2: &Individual, rng: &mut Rng) -> (Indi
     let child2_places = node_set(&child2.places, |p| &p.name);
     let child2_trans = node_set(&child2.transitions, |t| &t.name);
 
-    copy_valid_arcs(&parent2.net, &mut child1, &child1_places, &child1_trans, false);
-    copy_valid_arcs(&parent1.net, &mut child1, &child1_places, &child1_trans, true);
-    copy_valid_arcs(&parent1.net, &mut child2, &child2_places, &child2_trans, false);
-    copy_valid_arcs(&parent2.net, &mut child2, &child2_places, &child2_trans, true);
+    copy_valid_arcs(
+        &parent2.net,
+        &mut child1,
+        &child1_places,
+        &child1_trans,
+        false,
+    );
+    copy_valid_arcs(
+        &parent1.net,
+        &mut child1,
+        &child1_places,
+        &child1_trans,
+        true,
+    );
+    copy_valid_arcs(
+        &parent1.net,
+        &mut child2,
+        &child2_places,
+        &child2_trans,
+        false,
+    );
+    copy_valid_arcs(
+        &parent2.net,
+        &mut child2,
+        &child2_places,
+        &child2_trans,
+        true,
+    );
 
     // Build markings (filtered to places that exist in each child)
     let c1_init = filter_marking(&parent1.initial_marking, &child1_places);
@@ -287,8 +322,18 @@ fn crossover(parent1: &Individual, parent2: &Individual, rng: &mut Rng) -> (Indi
     let c2_final = fallback_marking(c2_final, &child2, MarkingEnd::Final);
 
     (
-        Individual { net: child1, initial_marking: c1_init, final_marking: c1_final, fitness: 0.0 },
-        Individual { net: child2, initial_marking: c2_init, final_marking: c2_final, fitness: 0.0 },
+        Individual {
+            net: child1,
+            initial_marking: c1_init,
+            final_marking: c1_final,
+            fitness: 0.0,
+        },
+        Individual {
+            net: child2,
+            initial_marking: c2_init,
+            final_marking: c2_final,
+            fitness: 0.0,
+        },
     )
 }
 
@@ -306,7 +351,10 @@ fn node_set<T, F>(nodes: &[T], name_fn: F) -> HashSet<String>
 where
     F: Fn(&T) -> &str,
 {
-    nodes.iter().map(|n| name_fn(n).to_string()).collect::<HashSet<_>>()
+    nodes
+        .iter()
+        .map(|n| name_fn(n).to_string())
+        .collect::<HashSet<_>>()
 }
 
 /// Copy arcs that reference existing nodes in the child net.
@@ -324,7 +372,12 @@ fn copy_valid_arcs(
         let st = trans.contains(&arc.source);
         let tp = places.contains(&arc.target);
         if (sp && tt) || (st && tp) {
-            if dedup && child.arcs.iter().any(|a| a.source == arc.source && a.target == arc.target) {
+            if dedup
+                && child
+                    .arcs
+                    .iter()
+                    .any(|a| a.source == arc.source && a.target == arc.target)
+            {
                 continue;
             }
             child.add_arc(&arc.source, &arc.target);
@@ -467,7 +520,11 @@ fn redirect_arc_mutation(individual: &mut Individual, rng: &mut Rng) {
     let place_idx = rng.next_usize(individual.net.places.len());
 
     // Only redirect arcs whose target is a place
-    let target_is_place = individual.net.places.iter().any(|p| p.name == individual.net.arcs[arc_idx].target);
+    let target_is_place = individual
+        .net
+        .places
+        .iter()
+        .any(|p| p.name == individual.net.arcs[arc_idx].target);
     if target_is_place {
         let new_target = individual.net.places[place_idx].name.clone();
         individual.net.arcs[arc_idx].target = new_target;
@@ -480,7 +537,9 @@ fn toggle_marking_mutation(individual: &mut Individual, rng: &mut Rng) {
         return;
     }
 
-    let place = individual.net.places[rng.next_usize(individual.net.places.len())].name.clone();
+    let place = individual.net.places[rng.next_usize(individual.net.places.len())]
+        .name
+        .clone();
 
     if rng.next_f64() < 0.5 {
         // Toggle initial marking
@@ -504,7 +563,11 @@ fn toggle_marking_mutation(individual: &mut Individual, rng: &mut Rng) {
 /// Select a parent using tournament selection.
 ///
 /// Randomly sample `tournament_size` individuals and return the fittest.
-fn tournament_select<'a>(population: &'a [Individual], tournament_size: usize, rng: &mut Rng) -> &'a Individual {
+fn tournament_select<'a>(
+    population: &'a [Individual],
+    tournament_size: usize,
+    rng: &mut Rng,
+) -> &'a Individual {
     let size = tournament_size.min(population.len()).max(1);
     let mut best_idx = rng.next_usize(population.len());
     for _ in 1..size {
@@ -557,7 +620,11 @@ pub fn discover_genetic(log: &EventLog, config: Option<GeneticMinerConfig>) -> P
     }
 
     // Sort by fitness descending (best first)
-    population.sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap_or(std::cmp::Ordering::Equal));
+    population.sort_by(|a, b| {
+        b.fitness
+            .partial_cmp(&a.fitness)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut best_ever = population[0].clone();
     let mut stagnation_count: usize = 0;
@@ -584,8 +651,7 @@ pub fn discover_genetic(log: &EventLog, config: Option<GeneticMinerConfig>) -> P
         // Elitism: keep top 10%
         let elite_count = (population_size as f64 * 0.1).ceil() as usize;
         let elite_count = elite_count.max(1).min(population_size);
-        let mut next_population: Vec<Individual> =
-            population[..elite_count].to_vec();
+        let mut next_population: Vec<Individual> = population[..elite_count].to_vec();
 
         // Fill the rest with offspring
         let tournament_size = 3usize;
@@ -630,7 +696,11 @@ pub fn discover_genetic(log: &EventLog, config: Option<GeneticMinerConfig>) -> P
         }
 
         // Sort by fitness
-        next_population.sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap_or(std::cmp::Ordering::Equal));
+        next_population.sort_by(|a, b| {
+            b.fitness
+                .partial_cmp(&a.fitness)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Trim to fixed population size
         next_population.truncate(population_size);
@@ -674,10 +744,18 @@ mod tests {
     fn test_genetic_miner_discovers_sequential_net() {
         let log = make_log(vec![("c1", &["A", "B", "C"]), ("c2", &["A", "B", "C"])]);
         let config = GeneticMinerConfig {
-            population_size: 10, generations: 20, mutation_rate: 0.15, crossover_rate: 0.7,
+            population_size: 10,
+            generations: 20,
+            mutation_rate: 0.15,
+            crossover_rate: 0.7,
         };
         let result = discover_genetic(&log, Some(config));
-        let labels: Vec<String> = result.net.transitions.iter().filter_map(|t| t.label.clone()).collect();
+        let labels: Vec<String> = result
+            .net
+            .transitions
+            .iter()
+            .filter_map(|t| t.label.clone())
+            .collect();
         assert!(labels.contains(&"A".to_string()));
         assert!(labels.contains(&"B".to_string()));
         assert!(labels.contains(&"C".to_string()));
@@ -689,15 +767,30 @@ mod tests {
 
     #[test]
     fn test_genetic_miner_improves_with_generations() {
-        let log = make_log(vec![("c1", &["A", "B"]), ("c2", &["A", "B"]), ("c3", &["A", "B"])]);
-        let small = GeneticMinerConfig { population_size: 6, generations: 5, ..Default::default() };
-        let large = GeneticMinerConfig { population_size: 10, generations: 30, ..Default::default() };
+        let log = make_log(vec![
+            ("c1", &["A", "B"]),
+            ("c2", &["A", "B"]),
+            ("c3", &["A", "B"]),
+        ]);
+        let small = GeneticMinerConfig {
+            population_size: 6,
+            generations: 5,
+            ..Default::default()
+        };
+        let large = GeneticMinerConfig {
+            population_size: 10,
+            generations: 30,
+            ..Default::default()
+        };
         let r_s = discover_genetic(&log, Some(small));
         let r_l = discover_genetic(&log, Some(large));
         let f_s = compute_fitness(&r_s.net, &r_s.initial_marking, &r_s.final_marking, &log);
         let f_l = compute_fitness(&r_l.net, &r_l.initial_marking, &r_l.final_marking, &log);
-        assert!(f_l.avg_trace_fitness >= f_s.avg_trace_fitness - 0.05,
+        assert!(
+            f_l.avg_trace_fitness >= f_s.avg_trace_fitness - 0.05,
             "more generations (fit={:.4}) should not be much worse than fewer (fit={:.4})",
-            f_l.avg_trace_fitness, f_s.avg_trace_fitness);
+            f_l.avg_trace_fitness,
+            f_s.avg_trace_fitness
+        );
     }
 }

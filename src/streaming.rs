@@ -277,7 +277,12 @@ impl SpcEngine {
     }
 
     /// Set explicit control limits (skip calibration).
-    pub fn set_limits(&mut self, fitness: ControlLimits, perfect_rate: ControlLimits, missing: ControlLimits) {
+    pub fn set_limits(
+        &mut self,
+        fitness: ControlLimits,
+        perfect_rate: ControlLimits,
+        missing: ControlLimits,
+    ) {
         self.fitness_limits = Some(fitness);
         self.perfect_rate_limits = Some(perfect_rate);
         self.missing_limits = Some(missing);
@@ -286,7 +291,12 @@ impl SpcEngine {
     /// Calibrate control limits from historical data.
     ///
     /// Requires at least 30 samples for reliable statistics.
-    pub fn calibrate(&mut self, fitness_samples: &[f64], perfect_rate_samples: &[f64], missing_samples: &[f64]) {
+    pub fn calibrate(
+        &mut self,
+        fitness_samples: &[f64],
+        perfect_rate_samples: &[f64],
+        missing_samples: &[f64],
+    ) {
         if fitness_samples.len() >= 30 {
             let (mean, std) = mean_std(fitness_samples);
             self.baseline_fitness = Some((mean, std));
@@ -305,7 +315,12 @@ impl SpcEngine {
     }
 
     /// Check for drift signals using current metrics.
-    pub fn check_drift(&mut self, fitness: f64, perfect_rate: f64, missing: f64) -> Vec<DriftSignal> {
+    pub fn check_drift(
+        &mut self,
+        fitness: f64,
+        perfect_rate: f64,
+        missing: f64,
+    ) -> Vec<DriftSignal> {
         let mut signals = Vec::new();
 
         // Update history
@@ -316,10 +331,20 @@ impl SpcEngine {
             signals.extend(self.check_metric("fitness", fitness, limits, &self.fitness_history));
         }
         if let Some(limits) = &self.perfect_rate_limits {
-            signals.extend(self.check_metric("perfect_rate", perfect_rate, limits, &self.perfect_rate_history));
+            signals.extend(self.check_metric(
+                "perfect_rate",
+                perfect_rate,
+                limits,
+                &self.perfect_rate_history,
+            ));
         }
         if let Some(limits) = &self.missing_limits {
-            signals.extend(self.check_metric("missing_tokens", missing, limits, &self.missing_history));
+            signals.extend(self.check_metric(
+                "missing_tokens",
+                missing,
+                limits,
+                &self.missing_history,
+            ));
         }
 
         signals
@@ -342,7 +367,13 @@ impl SpcEngine {
         self.missing_history.push_back(missing);
     }
 
-    fn check_metric(&self, name: &str, value: f64, limits: &ControlLimits, history: &std::collections::VecDeque<f64>) -> Vec<DriftSignal> {
+    fn check_metric(
+        &self,
+        name: &str,
+        value: f64,
+        limits: &ControlLimits,
+        history: &std::collections::VecDeque<f64>,
+    ) -> Vec<DriftSignal> {
         let mut signals = Vec::new();
         let sigma_dist = limits.sigma_distance(value);
         let severity = severity_from_sigma(sigma_dist);
@@ -441,9 +472,9 @@ impl SpcEngine {
 
         // Rule 6: Fourteen alternating
         if history_vec.len() >= 14 {
-            let alternating = history_vec.windows(2).all(|w| {
-                (w[1] > w[0]) != (w[0] > history_vec[history_vec.len() - 14])
-            });
+            let alternating = history_vec
+                .windows(2)
+                .all(|w| (w[1] > w[0]) != (w[0] > history_vec[history_vec.len() - 14]));
             if alternating {
                 signals.push(DriftSignal {
                     rule: WesternElectricRule::FourteenAlternating,
@@ -597,11 +628,7 @@ pub struct StreamingConformance {
 
 impl StreamingConformance {
     /// Construct from explicit Petri net components.
-    pub fn new(
-        net: PetriNet,
-        initial_marking: Marking,
-        final_marking: Marking,
-    ) -> Self {
+    pub fn new(net: PetriNet, initial_marking: Marking, final_marking: Marking) -> Self {
         let config = AlertConfig::default();
         Self {
             net,
@@ -658,18 +685,13 @@ impl StreamingConformance {
     ///
     /// Returns the per-trace result and any new alerts fired.
     pub fn push_trace(&mut self, trace: &Trace) -> (TraceReplayResult, Vec<Alert>) {
-        let result = replay_trace(
-            &self.net,
-            &self.initial_marking,
-            &self.final_marking,
-            trace,
-        );
+        let result = replay_trace(&self.net, &self.initial_marking, &self.final_marking, trace);
 
-        self.total_produced  += result.produced_tokens;
-        self.total_consumed  += result.consumed_tokens;
-        self.total_missing   += result.missing_tokens;
+        self.total_produced += result.produced_tokens;
+        self.total_consumed += result.consumed_tokens;
+        self.total_missing += result.missing_tokens;
         self.total_remaining += result.remaining_tokens;
-        self.traces_seen     += 1;
+        self.traces_seen += 1;
         self.trace_fitness_sum += result.fitness;
 
         if result.is_perfect() {
@@ -701,8 +723,8 @@ impl StreamingConformance {
         let smoothed_missing = self.missing_ewma.update(current_missing);
 
         // Collect calibration data if SPC is enabled
-        if self.alert_config.enable_spc {
-            if self.fitness_calibration.len() < self.alert_config.spc_calibration_samples {
+        if self.alert_config.enable_spc
+            && self.fitness_calibration.len() < self.alert_config.spc_calibration_samples {
                 self.fitness_calibration.push(current_fitness);
                 self.perfect_rate_calibration.push(current_perfect_rate);
                 self.missing_calibration.push(current_missing);
@@ -716,14 +738,17 @@ impl StreamingConformance {
                     );
                 }
             }
-        }
 
-        let alerts = self.check_alerts_with_spc(smoothed_fitness, smoothed_perfect_rate, smoothed_missing);
+        let alerts =
+            self.check_alerts_with_spc(smoothed_fitness, smoothed_perfect_rate, smoothed_missing);
         (result, alerts)
     }
 
     /// Push all traces from an iterator, returning the final snapshot.
-    pub fn push_all<'a>(&mut self, traces: impl IntoIterator<Item = &'a Trace>) -> ConformanceSnapshot {
+    pub fn push_all<'a>(
+        &mut self,
+        traces: impl IntoIterator<Item = &'a Trace>,
+    ) -> ConformanceSnapshot {
         for trace in traces {
             self.push_trace(trace);
         }
@@ -751,9 +776,13 @@ impl StreamingConformance {
         let tc: u32 = self.window.iter().map(|r| r.consumed_tokens).sum();
         let tm: u32 = self.window.iter().map(|r| r.missing_tokens).sum();
         let tr: u32 = self.window.iter().map(|r| r.remaining_tokens).sum();
-        if tp == 0 && tc == 0 { return 1.0; }
-        let c = tc as f64; let p = tp as f64;
-        let m = tm as f64; let r = tr as f64;
+        if tp == 0 && tc == 0 {
+            return 1.0;
+        }
+        let c = tc as f64;
+        let p = tp as f64;
+        let m = tm as f64;
+        let r = tr as f64;
         (0.5 * (1.0 - m / c) + 0.5 * (1.0 - r / p)).clamp(0.0, 1.0)
     }
 
@@ -782,7 +811,8 @@ impl StreamingConformance {
         let smoothed_missing = self.missing_ewma.get();
 
         // Calculate alerts without mutation
-        let alerts = self.calculate_alerts(smoothed_fitness, smoothed_perfect_rate, smoothed_missing);
+        let alerts =
+            self.calculate_alerts(smoothed_fitness, smoothed_perfect_rate, smoothed_missing);
 
         ConformanceSnapshot {
             fitness,
@@ -845,8 +875,15 @@ impl StreamingConformance {
     }
 
     /// Calculate current alerts without mutation (for snapshots).
-    fn calculate_alerts(&self, smoothed_fitness: f64, smoothed_perfect_rate: f64, smoothed_missing: f64) -> Vec<Alert> {
-        if self.traces_seen == 0 { return vec![]; }
+    fn calculate_alerts(
+        &self,
+        smoothed_fitness: f64,
+        smoothed_perfect_rate: f64,
+        smoothed_missing: f64,
+    ) -> Vec<Alert> {
+        if self.traces_seen == 0 {
+            return vec![];
+        }
         let mut alerts = Vec::new();
 
         // Threshold-based alerts only (SPC requires mutation)
@@ -872,8 +909,15 @@ impl StreamingConformance {
         alerts
     }
 
-    fn check_alerts_with_spc(&mut self, smoothed_fitness: f64, smoothed_perfect_rate: f64, smoothed_missing: f64) -> Vec<Alert> {
-        if self.traces_seen == 0 { return vec![]; }
+    fn check_alerts_with_spc(
+        &mut self,
+        smoothed_fitness: f64,
+        smoothed_perfect_rate: f64,
+        smoothed_missing: f64,
+    ) -> Vec<Alert> {
+        if self.traces_seen == 0 {
+            return vec![];
+        }
         let mut alerts = Vec::new();
 
         // Threshold-based alerts
@@ -898,7 +942,11 @@ impl StreamingConformance {
 
         // SPC-based drift alerts (only if enabled and calibrated)
         if self.alert_config.enable_spc && self.is_spc_calibrated() {
-            let drift_signals = self.spc_engine.check_drift(smoothed_fitness, smoothed_perfect_rate, smoothed_missing);
+            let drift_signals = self.spc_engine.check_drift(
+                smoothed_fitness,
+                smoothed_perfect_rate,
+                smoothed_missing,
+            );
             for signal in drift_signals {
                 alerts.push(Alert::DriftDetected(signal));
             }
@@ -962,7 +1010,9 @@ pub fn streaming_push_trace(_handle: u32, _trace_json: &str) -> Result<String, J
     // 3. Call push_trace()
     // 4. Return snapshot as JSON
 
-    Ok(String::from(r#"{"fitness": 1.0, "traces_seen": 1, "perfect_traces": 1, "alerts": []}"#))
+    Ok(String::from(
+        r#"{"fitness": 1.0, "traces_seen": 1, "perfect_traces": 1, "alerts": []}"#,
+    ))
 }
 
 /// Get current snapshot of streaming conformance metrics.
@@ -977,7 +1027,9 @@ pub fn streaming_snapshot(_handle: u32) -> Result<String, JsValue> {
     // Placeholder implementation
     // Would return: fitness, traces_seen, perfect_traces, windowed_fitness, ewma_metrics, drift_signals
 
-    Ok(String::from(r#"{"fitness": 1.0, "traces_seen": 0, "perfect_traces": 0, "windowed_fitness": 1.0, "ewma_fitness": 1.0, "drift_signals": []}"#))
+    Ok(String::from(
+        r#"{"fitness": 1.0, "traces_seen": 0, "perfect_traces": 0, "windowed_fitness": 1.0, "ewma_fitness": 1.0, "drift_signals": []}"#,
+    ))
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -999,12 +1051,15 @@ mod tests {
     fn make_trace(case_id: &str, acts: &[&str]) -> Trace {
         Trace {
             case_id: case_id.to_string(),
-            events: acts.iter().map(|&a| Event {
-                name: a.to_string(),
-                timestamp: None,
-                lifecycle: None,
-                attributes: HashMap::new(),
-            }).collect(),
+            events: acts
+                .iter()
+                .map(|&a| Event {
+                    name: a.to_string(),
+                    timestamp: None,
+                    lifecycle: None,
+                    attributes: HashMap::new(),
+                })
+                .collect(),
         }
     }
 
@@ -1039,7 +1094,7 @@ mod tests {
         let (arena, root) = parse("PO=(nodes={A, B}, order={A-->B})");
         let mut sc = StreamingConformance::from_powl(&arena, root).unwrap();
         sc.push_trace(&make_trace("c1", &["A", "B"])); // perfect
-        sc.push_trace(&make_trace("c2", &["A"]));       // imperfect
+        sc.push_trace(&make_trace("c2", &["A"])); // imperfect
         let snap = sc.snapshot();
         assert!(snap.fitness < 1.0 && snap.fitness > 0.0);
         assert_eq!(snap.perfect_traces, 1);
@@ -1069,7 +1124,9 @@ mod tests {
             spc_calibration_samples: 30,
         });
         let (_r, alerts) = sc.push_trace(&make_trace("c1", &["A"])); // imperfect
-        assert!(alerts.iter().any(|a| matches!(a, Alert::FitnessBelowThreshold { .. })));
+        assert!(alerts
+            .iter()
+            .any(|a| matches!(a, Alert::FitnessBelowThreshold { .. })));
     }
 
     #[test]
@@ -1078,7 +1135,9 @@ mod tests {
         let mut sc = StreamingConformance::from_powl(&arena, root).unwrap();
         sc.set_window_size(2);
         // Push 3 imperfect, then 2 perfect
-        for _ in 0..3 { sc.push_trace(&make_trace("x", &["A"])); }
+        for _ in 0..3 {
+            sc.push_trace(&make_trace("x", &["A"]));
+        }
         sc.push_trace(&make_trace("p1", &["A", "B"]));
         sc.push_trace(&make_trace("p2", &["A", "B"]));
         // Windowed should be 1.0 (last 2 are perfect)

@@ -233,9 +233,15 @@ mod tests {
 
         // Should have 3 edges: Create Order->order, Create Order->customer, Pay->order, Ship->order
         assert!(etot.edges.len() >= 3);
-        assert!(etot.edges.contains(&(String::from("Create Order"), String::from("order"))));
-        assert!(etot.edges.contains(&(String::from("Create Order"), String::from("customer"))));
-        assert!(etot.edges.contains(&(String::from("Pay"), String::from("order"))));
+        assert!(etot
+            .edges
+            .contains(&(String::from("Create Order"), String::from("order"))));
+        assert!(etot
+            .edges
+            .contains(&(String::from("Create Order"), String::from("customer"))));
+        assert!(etot
+            .edges
+            .contains(&(String::from("Pay"), String::from("order"))));
     }
 
     #[test]

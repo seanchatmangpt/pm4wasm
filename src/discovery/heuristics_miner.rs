@@ -59,8 +59,14 @@ fn compute_dependency(
     a: &str,
     b: &str,
 ) -> f64 {
-    let ab = follows.get(&(a.to_string(), b.to_string())).copied().unwrap_or(0);
-    let ba = precedes.get(&(a.to_string(), b.to_string())).copied().unwrap_or(0);
+    let ab = follows
+        .get(&(a.to_string(), b.to_string()))
+        .copied()
+        .unwrap_or(0);
+    let ba = precedes
+        .get(&(a.to_string(), b.to_string()))
+        .copied()
+        .unwrap_or(0);
 
     let ab_f = ab as f64;
     let ba_f = ba as f64;
@@ -89,9 +95,7 @@ pub fn discover_heuristics_miner(log: &EventLog, dependency_threshold: f64) -> H
 
         if !events.is_empty() {
             // Record start activity
-            *start_activities
-                .entry(events[0].name.clone())
-                .or_insert(0) += 1;
+            *start_activities.entry(events[0].name.clone()).or_insert(0) += 1;
 
             // Record end activity
             *end_activities
@@ -147,7 +151,7 @@ pub fn discover_heuristics_miner(log: &EventLog, dependency_threshold: f64) -> H
 ///
 /// Creates places and transitions based on dependency relations.
 pub fn heuristics_to_petri_net(net: &HeuristicsNet) -> PetriNetResult {
-    use crate::petri_net::{PetriNet, Place, Transition, Arc, Marking};
+    use crate::petri_net::{Arc, Marking, PetriNet, Place, Transition};
     use std::collections::HashMap;
 
     let mut places = Vec::new();
@@ -178,7 +182,10 @@ pub fn heuristics_to_petri_net(net: &HeuristicsNet) -> PetriNetResult {
     places.push(Place {
         name: sink_place.clone(),
     });
-    final_marking.insert(sink_place.clone(), net.end_activities.values().sum::<usize>() as u32);
+    final_marking.insert(
+        sink_place.clone(),
+        net.end_activities.values().sum::<usize>() as u32,
+    );
 
     // Create arcs based on dependencies
     for dep in &net.dependencies {
@@ -188,7 +195,11 @@ pub fn heuristics_to_petri_net(net: &HeuristicsNet) -> PetriNetResult {
             .iter()
             .position(|a| a == &dep.from)
             .unwrap_or(0);
-        let to_idx = net.activities.iter().position(|a| a == &dep.to).unwrap_or(0);
+        let to_idx = net
+            .activities
+            .iter()
+            .position(|a| a == &dep.to)
+            .unwrap_or(0);
 
         let from_transition = &transitions[from_idx].name;
         let to_transition = &transitions[to_idx].name;
@@ -274,15 +285,24 @@ mod tests {
         assert!(net.activities.contains(&"C".to_string()));
 
         // A→B should have high dependency (appears in 2/3 traces)
-        let ab_dep = net.dependencies.iter().find(|d| d.from == "A" && d.to == "B");
+        let ab_dep = net
+            .dependencies
+            .iter()
+            .find(|d| d.from == "A" && d.to == "B");
         assert!(ab_dep.is_some());
 
         // B→C appears in 2/3 traces, so with threshold 0.5 it should be included
-        let bc_dep = net.dependencies.iter().find(|d| d.from == "B" && d.to == "C");
+        let bc_dep = net
+            .dependencies
+            .iter()
+            .find(|d| d.from == "B" && d.to == "C");
         assert!(bc_dep.is_some());
 
         // A→C appears in all 3 traces
-        let ac_dep = net.dependencies.iter().find(|d| d.from == "A" && d.to == "C");
+        let ac_dep = net
+            .dependencies
+            .iter()
+            .find(|d| d.from == "A" && d.to == "C");
         assert!(ac_dep.is_some());
     }
 

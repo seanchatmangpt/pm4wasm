@@ -16,7 +16,6 @@
 /// Filter event log by event/trace attributes.
 ///
 /// Mirrors `pm4py.filter_event_attribute_values()` and related.
-
 use crate::event_log::EventLog;
 
 /// Filter to keep only traces that contain at least one event with the given
@@ -43,7 +42,11 @@ pub fn filter_event_attribute_values(
                 };
                 val.map(|v| value_set.contains(v)).unwrap_or(false)
             });
-            if positive { matches } else { !matches }
+            if positive {
+                matches
+            } else {
+                !matches
+            }
         })
         .cloned()
         .collect();
@@ -72,7 +75,11 @@ pub fn filter_trace_attribute(
                 _ => None, // no generic trace attributes beyond case_id
             };
             let matches = val.map(|v| value_set.contains(v)).unwrap_or(false);
-            if positive { matches } else { !matches }
+            if positive {
+                matches
+            } else {
+                !matches
+            }
         })
         .cloned()
         .collect();
@@ -99,12 +106,8 @@ mod tests {
     #[test]
     fn test_filter_event_attribute_values() {
         let log = make_test_log();
-        let filtered = filter_event_attribute_values(
-            &log,
-            "concept:name",
-            &["B".to_string()],
-            true,
-        );
+        let filtered =
+            filter_event_attribute_values(&log, "concept:name", &["B".to_string()], true);
         assert_eq!(filtered.traces.len(), 1);
         assert_eq!(filtered.traces[0].case_id, "1");
     }
@@ -112,12 +115,8 @@ mod tests {
     #[test]
     fn test_filter_event_attribute_values_negative() {
         let log = make_test_log();
-        let filtered = filter_event_attribute_values(
-            &log,
-            "concept:name",
-            &["C".to_string()],
-            false,
-        );
+        let filtered =
+            filter_event_attribute_values(&log, "concept:name", &["C".to_string()], false);
         // All traces that do NOT contain C → only case 1
         assert_eq!(filtered.traces.len(), 1);
         assert_eq!(filtered.traces[0].case_id, "1");
@@ -126,12 +125,7 @@ mod tests {
     #[test]
     fn test_filter_trace_attribute() {
         let log = make_test_log();
-        let filtered = filter_trace_attribute(
-            &log,
-            "concept:name",
-            &["1".to_string()],
-            true,
-        );
+        let filtered = filter_trace_attribute(&log, "concept:name", &["1".to_string()], true);
         assert_eq!(filtered.traces.len(), 1);
     }
 }

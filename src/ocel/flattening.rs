@@ -64,10 +64,7 @@ pub fn flatten_by_object_type(ocel: &OCEL, object_type: &str) -> Result<EventLog
         .collect();
 
     if target_objects.is_empty() {
-        return Err(format!(
-            "No objects found with type '{}'",
-            object_type
-        ));
+        return Err(format!("No objects found with type '{}'", object_type));
     }
 
     // Step 2: Build a map from object_id to related events
@@ -199,7 +196,7 @@ pub struct OCELSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ocel::{OCELEvent, OCELObject, OCELRelation, parse_ocel_json};
+    use crate::ocel::{parse_ocel_json, OCELEvent, OCELObject, OCELRelation};
 
     fn make_test_ocel() -> OCEL {
         let json = r#"{

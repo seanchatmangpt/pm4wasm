@@ -19,7 +19,6 @@
 /// `pm4py.filter_between()`, `pm4py.filter_prefixes()`, `pm4py.filter_suffixes()`,
 /// `pm4py.filter_directly_follows_relation()`, `pm4py.filter_eventually_follows_relation()`,
 /// `pm4py.filter_trim()`.
-
 use crate::event_log::EventLog;
 
 /// Filter traces to only those that start with one of the given activities.
@@ -136,7 +135,9 @@ pub fn filter_directly_follows_relation(log: &EventLog, a: &str, b: &str) -> Eve
         .traces
         .iter()
         .filter(|t| {
-            t.events.windows(2).any(|w| w[0].name == a && w[1].name == b)
+            t.events
+                .windows(2)
+                .any(|w| w[0].name == a && w[1].name == b)
         })
         .cloned()
         .collect();
@@ -152,7 +153,9 @@ pub fn filter_eventually_follows_relation(log: &EventLog, a: &str, b: &str) -> E
         .iter()
         .filter(|t| {
             let pos_a = t.events.iter().position(|e| e.name == a);
-            pos_a.map(|pa| t.events[pa..].iter().any(|e| e.name == b)).unwrap_or(false)
+            pos_a
+                .map(|pa| t.events[pa..].iter().any(|e| e.name == b))
+                .unwrap_or(false)
         })
         .cloned()
         .collect();

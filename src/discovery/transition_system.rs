@@ -72,7 +72,11 @@ pub struct TransitionSystem {
 ///
 /// # Returns
 /// Transition system with states and transitions
-pub fn discover_transition_system(log: &EventLog, window: usize, direction: &str) -> TransitionSystem {
+pub fn discover_transition_system(
+    log: &EventLog,
+    window: usize,
+    direction: &str,
+) -> TransitionSystem {
     let mut states: Vec<TSState> = Vec::new();
     let mut transitions: Vec<TSTransition> = Vec::new();
     let mut state_map: HashMap<String, usize> = HashMap::new();
@@ -91,7 +95,7 @@ pub fn discover_transition_system(log: &EventLog, window: usize, direction: &str
         let mut current_state_id = usize::MAX;
 
         for i in 0..activities.len() {
-            let start = if i >= window { i - window } else { 0 };
+            let start = i.saturating_sub(window);
             let state_activities: Vec<&str> = if is_forward {
                 activities[start..=i].to_vec()
             } else {
@@ -155,16 +159,41 @@ mod tests {
                 Trace {
                     case_id: "1".to_string(),
                     events: vec![
-                        Event { name: "A".to_string(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
-                        Event { name: "B".to_string(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
-                        Event { name: "C".to_string(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
+                        Event {
+                            name: "A".to_string(),
+                            timestamp: None,
+                            lifecycle: None,
+                            attributes: HashMap::new(),
+                        },
+                        Event {
+                            name: "B".to_string(),
+                            timestamp: None,
+                            lifecycle: None,
+                            attributes: HashMap::new(),
+                        },
+                        Event {
+                            name: "C".to_string(),
+                            timestamp: None,
+                            lifecycle: None,
+                            attributes: HashMap::new(),
+                        },
                     ],
                 },
                 Trace {
                     case_id: "2".to_string(),
                     events: vec![
-                        Event { name: "A".to_string(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
-                        Event { name: "B".to_string(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
+                        Event {
+                            name: "A".to_string(),
+                            timestamp: None,
+                            lifecycle: None,
+                            attributes: HashMap::new(),
+                        },
+                        Event {
+                            name: "B".to_string(),
+                            timestamp: None,
+                            lifecycle: None,
+                            attributes: HashMap::new(),
+                        },
                     ],
                 },
             ],

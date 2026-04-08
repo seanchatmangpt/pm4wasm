@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod dfg;
+pub mod from_bpmn;
+pub mod pnml;
+pub mod process_tree_to_bpmn;
+pub mod ptml;
+pub mod to_bpmn;
 pub mod to_petri_net;
 pub mod to_process_tree;
-pub mod to_bpmn;
-pub mod from_bpmn;
 pub mod to_yawl;
-pub mod process_tree_to_bpmn;
-pub mod pnml;
-pub mod dfg;
-pub mod ptml;

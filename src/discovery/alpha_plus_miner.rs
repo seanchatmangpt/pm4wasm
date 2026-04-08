@@ -30,7 +30,6 @@
 ///
 /// **Time Complexity**: O(n²) where n is the number of distinct activities
 /// **Space Complexity**: O(n²) for the relation matrices
-
 use crate::event_log::EventLog;
 use crate::petri_net::{Marking, PetriNet, PetriNetResult};
 use std::collections::{HashMap, HashSet};
@@ -76,7 +75,12 @@ pub fn alpha_plus_miner(log: &EventLog) -> PetriNetResult {
         .filtered_dfg
         .keys()
         .cloned()
-        .chain(preproc.filtered_dfg.values().flat_map(|v| v.iter().cloned()))
+        .chain(
+            preproc
+                .filtered_dfg
+                .values()
+                .flat_map(|v| v.iter().cloned()),
+        )
         .chain(preproc.loop_one_activities.iter().cloned())
         .collect();
 
@@ -135,14 +139,20 @@ fn preprocess(log: &EventLog) -> PreprocessResult {
             if i > 0 {
                 let prev = &trace.events[i - 1].name;
                 if is_in_loop(&trace.events, i - 1) {
-                    b_dict.entry(prev.clone()).or_default().insert(activity.clone());
+                    b_dict
+                        .entry(prev.clone())
+                        .or_default()
+                        .insert(activity.clone());
                 }
             }
 
             if i + 1 < trace.events.len() {
                 let next = &trace.events[i + 1].name;
                 if is_in_loop(&trace.events, i + 1) {
-                    a_dict.entry(next.clone()).or_default().insert(activity.clone());
+                    a_dict
+                        .entry(next.clone())
+                        .or_default()
+                        .insert(activity.clone());
                 }
             }
         }
@@ -193,10 +203,7 @@ struct Relations {
     pub follows: HashSet<(String, String)>,
 }
 
-fn get_relations(
-    dfg: &HashMap<String, HashSet<String>>,
-    all: &HashSet<String>,
-) -> Relations {
+fn get_relations(dfg: &HashMap<String, HashSet<String>>, all: &HashSet<String>) -> Relations {
     let mut causal = HashSet::new();
     let mut parallel = HashSet::new();
     let mut follows = HashSet::new();
@@ -207,8 +214,8 @@ fn get_relations(
                 continue;
             }
 
-            let a_to_b = dfg.get(a).map_or(false, |s| s.contains(b));
-            let b_to_a = dfg.get(b).map_or(false, |s| s.contains(a));
+            let a_to_b = dfg.get(a).is_some_and(|s| s.contains(b));
+            let b_to_a = dfg.get(b).is_some_and(|s| s.contains(a));
 
             if a_to_b && b_to_a {
                 // Parallel relation (loop-2 detected)

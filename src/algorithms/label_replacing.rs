@@ -33,9 +33,10 @@ pub fn apply(
         None => node_idx, // shouldn't happen
 
         Some(PowlNode::Transition(t)) => {
-            let new_label = t.label.as_ref().and_then(|l| {
-                label_map.get(l).cloned().or_else(|| Some(l.clone()))
-            });
+            let new_label = t
+                .label
+                .as_ref()
+                .and_then(|l| label_map.get(l).cloned().or_else(|| Some(l.clone())));
             dest_arena.add_transition(new_label)
         }
 
@@ -161,8 +162,7 @@ mod tests {
     #[test]
     fn replace_in_po() {
         let mut arena = PowlArena::new();
-        let root =
-            parse_powl_model_string("PO=(nodes={A, B}, order={A-->B})", &mut arena).unwrap();
+        let root = parse_powl_model_string("PO=(nodes={A, B}, order={A-->B})", &mut arena).unwrap();
 
         let mut map = HashMap::new();
         map.insert("A".to_string(), "Start".to_string());
@@ -172,6 +172,10 @@ mod tests {
         let new_root = apply(&arena, root, &map, &mut dest);
 
         let repr = dest.to_repr(new_root);
-        assert!(repr.contains("Start") && repr.contains("End"), "got: {}", repr);
+        assert!(
+            repr.contains("Start") && repr.contains("End"),
+            "got: {}",
+            repr
+        );
     }
 }

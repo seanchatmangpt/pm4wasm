@@ -3,7 +3,7 @@
 // Generates executable workflow code from POWL models.
 // Targets: n8n JSON, Temporal Go, Camunda BPMN, YAWL v6 XML
 
-use crate::powl::{PowlArena, PowlNode, Operator};
+use crate::powl::{Operator, PowlArena, PowlNode};
 use std::collections::HashMap;
 
 /// Code generation result
@@ -86,7 +86,10 @@ pub fn generate_temporal(arena: &PowlArena, root: u32) -> CodegenResult {
     // Activity interface
     workflow_code.push_str("// Activities define the individual steps\n");
     for activity in &activities {
-        workflow_code.push_str(&format!("func {}(ctx workflow.Context, input string) (string, error) {{\n", activity));
+        workflow_code.push_str(&format!(
+            "func {}(ctx workflow.Context, input string) (string, error) {{\n",
+            activity
+        ));
         workflow_code.push_str(&format!("\t// TODO: Implement {}\n", activity));
         workflow_code.push_str("\treturn \"\", nil\n}\n\n");
     }
@@ -201,7 +204,7 @@ fn traverse_powl_for_n8n(
         match node {
             PowlNode::Transition(t) => {
                 let node_id = format!("node_{}", node_idx);
-                let label = t.label.as_ref().map(|s| s.as_str()).unwrap_or("silent");
+                let label = t.label.as_deref().unwrap_or("silent");
 
                 node_map.insert(node_idx, node_id.clone());
 
@@ -230,7 +233,8 @@ fn traverse_powl_for_n8n(
                         for child in &op.children {
                             if let Some(child_node) = arena.get(*child) {
                                 if let PowlNode::Transition(t) = child_node {
-                                    let label = t.label.as_ref().map(|s| s.as_str()).unwrap_or("option");
+                                    let label =
+                                        t.label.as_deref().unwrap_or("option");
                                     connections.push(serde_json::json!({
                                         "from": choice_id,
                                         "to": node_map.get(child),
@@ -243,13 +247,27 @@ fn traverse_powl_for_n8n(
                     Operator::Loop => {
                         // Loop: iterate over children
                         for child in &op.children {
-                            traverse_powl_for_n8n(arena, *child, nodes, connections, node_map, depth);
+                            traverse_powl_for_n8n(
+                                arena,
+                                *child,
+                                nodes,
+                                connections,
+                                node_map,
+                                depth,
+                            );
                         }
                     }
                     Operator::PartialOrder => {
                         // Partial order: execute children with constraints
                         for child in &op.children {
-                            traverse_powl_for_n8n(arena, *child, nodes, connections, node_map, depth);
+                            traverse_powl_for_n8n(
+                                arena,
+                                *child,
+                                nodes,
+                                connections,
+                                node_map,
+                                depth,
+                            );
                         }
                     }
                 }
@@ -332,34 +350,47 @@ fn generate_temporal_logic(
                     code.push_str(&format!("{}{}(ctx, input)\n", indent_str, activity));
                 }
             }
-            PowlNode::OperatorPowl(op) => {
-                match op.operator {
-                    Operator::Xor => {
-                        code.push_str(&format!("{}// XOR choice\n", indent_str));
-                        code.push_str(&format!("{}if true {{\n", indent_str));
-                        if op.children.len() > 0 {
-                            generate_temporal_logic(arena, op.children[0], code, activities, indent + 1);
-                        }
-                        code.push_str(&format!("{}}} else {{\n", indent_str));
-                        if op.children.len() > 1 {
-                            generate_temporal_logic(arena, op.children[1], code, activities, indent + 1);
-                        }
-                        code.push_str(&format!("{}}}\n", indent_str));
+            PowlNode::OperatorPowl(op) => match op.operator {
+                Operator::Xor => {
+                    code.push_str(&format!("{}// XOR choice\n", indent_str));
+                    code.push_str(&format!("{}if true {{\n", indent_str));
+                    if !op.children.is_empty() {
+                        generate_temporal_logic(
+                            arena,
+                            op.children[0],
+                            code,
+                            activities,
+                            indent + 1,
+                        );
                     }
-                    Operator::Loop => {
-                        code.push_str(&format!("{}// Loop\n", indent_str));
-                        for child in &op.children {
-                            generate_temporal_logic(arena, *child, code, activities, indent);
-                        }
+                    code.push_str(&format!("{}}} else {{\n", indent_str));
+                    if op.children.len() > 1 {
+                        generate_temporal_logic(
+                            arena,
+                            op.children[1],
+                            code,
+                            activities,
+                            indent + 1,
+                        );
                     }
-                    Operator::PartialOrder => {
-                        code.push_str(&format!("{}// Partial order: execute with constraints\n", indent_str));
-                        for child in &op.children {
-                            generate_temporal_logic(arena, *child, code, activities, indent);
-                        }
+                    code.push_str(&format!("{}}}\n", indent_str));
+                }
+                Operator::Loop => {
+                    code.push_str(&format!("{}// Loop\n", indent_str));
+                    for child in &op.children {
+                        generate_temporal_logic(arena, *child, code, activities, indent);
                     }
                 }
-            }
+                Operator::PartialOrder => {
+                    code.push_str(&format!(
+                        "{}// Partial order: execute with constraints\n",
+                        indent_str
+                    ));
+                    for child in &op.children {
+                        generate_temporal_logic(arena, *child, code, activities, indent);
+                    }
+                }
+            },
             _ => {}
         }
     }
@@ -373,10 +404,12 @@ fn generate_bpmn_elements(arena: &PowlArena, node_idx: u32, bpmn: &mut String, i
             PowlNode::Transition(t) => {
                 if let Some(label) = &t.label {
                     if label != "tau" {
-                        bpmn.push_str(&format!("{}<task id=\"{}\" name=\"{}\"/>\n",
+                        bpmn.push_str(&format!(
+                            "{}<task id=\"{}\" name=\"{}\"/>\n",
                             indent_str,
                             sanitize_activity_name(label),
-                            label));
+                            label
+                        ));
                     }
                 }
             }
@@ -403,9 +436,11 @@ fn generate_yawl_net(arena: &PowlArena, node_idx: u32, yawl: &mut String, indent
             PowlNode::Transition(t) => {
                 if let Some(label) = &t.label {
                     if label != "tau" {
-                        yawl.push_str(&format!("{}<task id=\"{}\">\n",
+                        yawl.push_str(&format!(
+                            "{}<task id=\"{}\">\n",
                             indent_str,
-                            sanitize_activity_name(label)));
+                            sanitize_activity_name(label)
+                        ));
                         yawl.push_str(&format!("{}<name>{}</name>\n", indent_str, label));
                         yawl.push_str(&format!("{}</task>\n", indent_str));
                     }

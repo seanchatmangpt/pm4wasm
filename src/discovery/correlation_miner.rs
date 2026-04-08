@@ -106,8 +106,14 @@ pub fn discover_correlation(
     if n < 2 {
         return CorrelationResult {
             edges: Vec::new(),
-            start_activities: activities.iter().map(|a| (a.clone(), act_map[a].0.len() as u32)).collect(),
-            end_activities: activities.iter().map(|a| (a.clone(), act_map[a].0.len() as u32)).collect(),
+            start_activities: activities
+                .iter()
+                .map(|a| (a.clone(), act_map[a].0.len() as u32))
+                .collect(),
+            end_activities: activities
+                .iter()
+                .map(|a| (a.clone(), act_map[a].0.len() as u32))
+                .collect(),
             num_traces: estimate_trace_count(&indexed, &cfg),
         };
     }
@@ -217,7 +223,9 @@ fn parse_timestamp(s: &str) -> DateTime<chrono::Utc> {
         }
     }
     let epoch = DateTime::parse_from_rfc3339("1970-01-01T00:00:00Z").unwrap();
-    DateTime::parse_from_rfc2822(s).unwrap_or(epoch).with_timezone(&chrono::Utc)
+    DateTime::parse_from_rfc2822(s)
+        .unwrap_or(epoch)
+        .with_timezone(&chrono::Utc)
 }
 
 /// Precede-succeed matrix: `PS[i][j]` = fraction of activity-i end-times that
@@ -321,7 +329,11 @@ fn greedy_lifo_avg(ai: &[i64], aj: &[i64], thr: i64) -> f64 {
 }
 
 fn avg(v: &[i64]) -> f64 {
-    if v.is_empty() { 0.0 } else { v.iter().sum::<i64>() as f64 / v.len() as f64 }
+    if v.is_empty() {
+        0.0
+    } else {
+        v.iter().sum::<i64>() as f64 / v.len() as f64
+    }
 }
 
 /// Greedy edge resolution: assign edge weights minimising cost
@@ -401,31 +413,54 @@ mod tests {
     use std::collections::HashMap;
 
     fn ev(name: &str, ts: &str) -> Event {
-        Event { name: name.into(), timestamp: Some(ts.into()), lifecycle: None, attributes: HashMap::new() }
+        Event {
+            name: name.into(),
+            timestamp: Some(ts.into()),
+            lifecycle: None,
+            attributes: HashMap::new(),
+        }
     }
 
     #[test]
     fn correlation_discovers_clear_temporal_pattern() {
         // Three cases: A->B->C repeated at 00:00, 00:10, 00:20
         let events = vec![
-            ev("A", "2024-01-01T00:00:00Z"), ev("B", "2024-01-01T00:00:01Z"),
-            ev("C", "2024-01-01T00:00:02Z"), ev("A", "2024-01-01T00:00:10Z"),
-            ev("B", "2024-01-01T00:00:11Z"), ev("C", "2024-01-01T00:00:12Z"),
-            ev("A", "2024-01-01T00:00:20Z"), ev("B", "2024-01-01T00:00:21Z"),
+            ev("A", "2024-01-01T00:00:00Z"),
+            ev("B", "2024-01-01T00:00:01Z"),
+            ev("C", "2024-01-01T00:00:02Z"),
+            ev("A", "2024-01-01T00:00:10Z"),
+            ev("B", "2024-01-01T00:00:11Z"),
+            ev("C", "2024-01-01T00:00:12Z"),
+            ev("A", "2024-01-01T00:00:20Z"),
+            ev("B", "2024-01-01T00:00:21Z"),
             ev("C", "2024-01-01T00:00:22Z"),
         ];
-        let result = discover_correlation(&events, Some(CorrelationConfig {
-            correlation_threshold: 5.0, min_edge_frequency: 1,
-        }));
+        let result = discover_correlation(
+            &events,
+            Some(CorrelationConfig {
+                correlation_threshold: 5.0,
+                min_edge_frequency: 1,
+            }),
+        );
 
         assert!(!result.edges.is_empty(), "Expected non-empty DFG edges");
         let ab = result.edges.iter().find(|(s, t, _)| s == "A" && t == "B");
-        assert!(ab.is_some(), "Expected A -> B edge, got: {:?}", result.edges);
+        assert!(
+            ab.is_some(),
+            "Expected A -> B edge, got: {:?}",
+            result.edges
+        );
         assert!(ab.unwrap().2 >= 2);
         let bc = result.edges.iter().find(|(s, t, _)| s == "B" && t == "C");
         assert!(bc.is_some(), "Expected B -> C edge");
-        assert!(result.start_activities.iter().any(|(a, _)| a == "A"), "A should be start");
-        assert!(result.end_activities.iter().any(|(a, _)| a == "C"), "C should be end");
+        assert!(
+            result.start_activities.iter().any(|(a, _)| a == "A"),
+            "A should be start"
+        );
+        assert!(
+            result.end_activities.iter().any(|(a, _)| a == "C"),
+            "C should be end"
+        );
         assert_eq!(result.num_traces, 3);
     }
 
@@ -438,7 +473,10 @@ mod tests {
 
     #[test]
     fn correlation_single_activity_no_edges() {
-        let events = vec![ev("A", "2024-01-01T00:00:00Z"), ev("A", "2024-01-01T00:00:01Z")];
+        let events = vec![
+            ev("A", "2024-01-01T00:00:00Z"),
+            ev("A", "2024-01-01T00:00:01Z"),
+        ];
         let r = discover_correlation(&events, None);
         assert!(r.edges.is_empty());
         assert_eq!(r.num_traces, 1);
@@ -447,8 +485,18 @@ mod tests {
     #[test]
     fn correlation_no_timestamps_returns_empty() {
         let events = vec![
-            Event { name: "A".into(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
-            Event { name: "B".into(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
+            Event {
+                name: "A".into(),
+                timestamp: None,
+                lifecycle: None,
+                attributes: HashMap::new(),
+            },
+            Event {
+                name: "B".into(),
+                timestamp: None,
+                lifecycle: None,
+                attributes: HashMap::new(),
+            },
         ];
         let r = discover_correlation(&events, None);
         assert!(r.edges.is_empty() && r.num_traces == 0);
@@ -460,11 +508,17 @@ mod tests {
             traces: vec![
                 crate::event_log::Trace {
                     case_id: "c1".into(),
-                    events: vec![ev("A", "2024-01-01T00:00:00Z"), ev("B", "2024-01-01T00:00:05Z")],
+                    events: vec![
+                        ev("A", "2024-01-01T00:00:00Z"),
+                        ev("B", "2024-01-01T00:00:05Z"),
+                    ],
                 },
                 crate::event_log::Trace {
                     case_id: "c2".into(),
-                    events: vec![ev("A", "2024-01-01T00:01:00Z"), ev("B", "2024-01-01T00:01:05Z")],
+                    events: vec![
+                        ev("A", "2024-01-01T00:01:00Z"),
+                        ev("B", "2024-01-01T00:01:05Z"),
+                    ],
                 },
             ],
         };
@@ -475,25 +529,41 @@ mod tests {
     #[test]
     fn correlation_min_edge_frequency_filters() {
         let events = vec![
-            ev("A", "2024-01-01T00:00:00Z"), ev("B", "2024-01-01T00:00:01Z"),
-            ev("A", "2024-01-01T00:00:10Z"), ev("B", "2024-01-01T00:00:11Z"),
-            ev("A", "2024-01-01T00:00:20Z"), ev("B", "2024-01-01T00:00:21Z"),
+            ev("A", "2024-01-01T00:00:00Z"),
+            ev("B", "2024-01-01T00:00:01Z"),
+            ev("A", "2024-01-01T00:00:10Z"),
+            ev("B", "2024-01-01T00:00:11Z"),
+            ev("A", "2024-01-01T00:00:20Z"),
+            ev("B", "2024-01-01T00:00:21Z"),
         ];
-        let r = discover_correlation(&events, Some(CorrelationConfig {
-            correlation_threshold: 3600.0, min_edge_frequency: 5,
-        }));
-        assert!(r.edges.is_empty(), "min_edge_frequency=5 should filter all edges");
+        let r = discover_correlation(
+            &events,
+            Some(CorrelationConfig {
+                correlation_threshold: 3600.0,
+                min_edge_frequency: 5,
+            }),
+        );
+        assert!(
+            r.edges.is_empty(),
+            "min_edge_frequency=5 should filter all edges"
+        );
     }
 
     #[test]
     fn correlation_detects_separate_traces_by_gap() {
         let events = vec![
-            ev("A", "2024-01-01T00:00:00Z"), ev("B", "2024-01-01T00:00:01Z"),
-            ev("A", "2024-01-01T02:00:00Z"), ev("B", "2024-01-01T02:00:01Z"),
+            ev("A", "2024-01-01T00:00:00Z"),
+            ev("B", "2024-01-01T00:00:01Z"),
+            ev("A", "2024-01-01T02:00:00Z"),
+            ev("B", "2024-01-01T02:00:01Z"),
         ];
-        let r = discover_correlation(&events, Some(CorrelationConfig {
-            correlation_threshold: 3600.0, min_edge_frequency: 1,
-        }));
+        let r = discover_correlation(
+            &events,
+            Some(CorrelationConfig {
+                correlation_threshold: 3600.0,
+                min_edge_frequency: 1,
+            }),
+        );
         assert_eq!(r.num_traces, 2, "2-hour gap should split into 2 traces");
     }
 }

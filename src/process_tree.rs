@@ -82,8 +82,7 @@ impl ProcessTree {
             (None, None) => "tau".to_string(),
             (None, Some(l)) => l.clone(),
             (Some(op), _) => {
-                let children: Vec<String> =
-                    self.children.iter().map(|c| c.to_repr()).collect();
+                let children: Vec<String> = self.children.iter().map(|c| c.to_repr()).collect();
                 format!("{} ( {} )", op.as_str(), children.join(", "))
             }
         }

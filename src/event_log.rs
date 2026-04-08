@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use quick_xml::events::Event as XmlEvent;
+use quick_xml::reader::Reader;
 /// Event log types and parsers (XES and CSV).
 ///
 /// Mirrors the essential pm4py event log concepts used for conformance checking.
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use quick_xml::events::Event as XmlEvent;
-use quick_xml::reader::Reader;
 
 // ─── Core types ───────────────────────────────────────────────────────────────
 
@@ -164,9 +164,7 @@ pub fn parse_xes(xml: &str) -> Result<EventLog, String> {
             XmlEvent::End(ref e) => match e.name().as_ref() {
                 b"event" if in_event => {
                     in_event = false;
-                    if let (Some(ev), Some(tr)) =
-                        (current_event.take(), current_trace.as_mut())
-                    {
+                    if let (Some(ev), Some(tr)) = (current_event.take(), current_trace.as_mut()) {
                         tr.events.push(ev);
                     }
                 }
@@ -216,14 +214,12 @@ pub fn parse_csv(csv: &str) -> Result<EventLog, String> {
 
     let activity_col = headers
         .iter()
-        .position(|h| {
-            matches!(h.to_lowercase().as_str(), "concept:name" | "activity")
-        })
+        .position(|h| matches!(h.to_lowercase().as_str(), "concept:name" | "activity"))
         .ok_or("CSV missing activity column")?;
 
-    let timestamp_col = headers.iter().position(|h| {
-        matches!(h.to_lowercase().as_str(), "time:timestamp" | "timestamp")
-    });
+    let timestamp_col = headers
+        .iter()
+        .position(|h| matches!(h.to_lowercase().as_str(), "time:timestamp" | "timestamp"));
 
     // Build traces in case-order
     let mut case_order: Vec<String> = Vec::new();

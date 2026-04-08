@@ -151,7 +151,7 @@ fn is_chain_response_satisfied(
     };
 
     for &a_idx in a_idxs {
-        if a_idx + 1 >= trace.len() || &trace[a_idx + 1] != b {
+        if a_idx + 1 >= trace.len() || trace[a_idx + 1] != b {
             return false;
         }
     }
@@ -212,7 +212,7 @@ fn is_chain_precedence_satisfied(
     };
 
     for &b_idx in b_idxs {
-        if b_idx == 0 || &trace[b_idx - 1] != a {
+        if b_idx == 0 || trace[b_idx - 1] != a {
             return false;
         }
     }
@@ -242,7 +242,10 @@ fn form_rules_table(
 
         for (idx, act) in trace.iter().enumerate() {
             *act_counter.entry(act.clone()).or_insert(0) += 1;
-            act_idxs.entry(act.clone()).or_insert_with(Vec::new).push(idx);
+            act_idxs
+                .entry(act.clone())
+                .or_default()
+                .push(idx);
         }
 
         // Evaluate templates for this trace
@@ -262,7 +265,11 @@ fn form_rules_table(
             if allowed_templates.contains(&DeclareTemplate::ExactlyOne) {
                 for act in activities {
                     let key = format!("exactly_one|{}", act);
-                    let value = if act_counter.get(act) == Some(&1) { 1 } else { -1 };
+                    let value = if act_counter.get(act) == Some(&1) {
+                        1
+                    } else {
+                        -1
+                    };
                     rules.insert(key, value);
                 }
             }
@@ -300,7 +307,11 @@ fn form_rules_table(
                             let value = if let (Some(a_idxs), Some(b_idxs)) =
                                 (act_idxs.get(a), act_idxs.get(b))
                             {
-                                if a_idxs.last() < b_idxs.first() { 1 } else { -1 }
+                                if a_idxs.last() < b_idxs.first() {
+                                    1
+                                } else {
+                                    -1
+                                }
                             } else {
                                 0
                             };
@@ -319,7 +330,11 @@ fn form_rules_table(
                             let value = if let (Some(a_idxs), Some(b_idxs)) =
                                 (act_idxs.get(a), act_idxs.get(b))
                             {
-                                if a_idxs.first() < b_idxs.first() { 1 } else { -1 }
+                                if a_idxs.first() < b_idxs.first() {
+                                    1
+                                } else {
+                                    -1
+                                }
                             } else if act_idxs.contains_key(a) {
                                 0 // a exists, b doesn't
                             } else {
@@ -337,12 +352,12 @@ fn form_rules_table(
                     for b in activities {
                         if a != b {
                             let key = format!("altresponse|{}|{}", a, b);
-                            let value =
-                                if is_alternate_response_satisfied(&trace, &act_idxs, a, b) {
-                                    1
-                                } else {
-                                    -1
-                                };
+                            let value = if is_alternate_response_satisfied(&trace, &act_idxs, a, b)
+                            {
+                                1
+                            } else {
+                                -1
+                            };
                             rules.insert(key, value);
                         }
                     }
@@ -355,12 +370,11 @@ fn form_rules_table(
                     for b in activities {
                         if a != b {
                             let key = format!("chainresponse|{}|{}", a, b);
-                            let value =
-                                if is_chain_response_satisfied(&trace, &act_idxs, a, b) {
-                                    1
-                                } else {
-                                    -1
-                                };
+                            let value = if is_chain_response_satisfied(&trace, &act_idxs, a, b) {
+                                1
+                            } else {
+                                -1
+                            };
                             rules.insert(key, value);
                         }
                     }
@@ -374,8 +388,7 @@ fn form_rules_table(
                         if a != b {
                             let key = format!("altprecedence|{}|{}", a, b);
                             let value =
-                                if is_alternate_precedence_satisfied(&trace, &act_idxs, a, b)
-                                {
+                                if is_alternate_precedence_satisfied(&trace, &act_idxs, a, b) {
                                     1
                                 } else {
                                     -1
@@ -392,12 +405,11 @@ fn form_rules_table(
                     for a in activities {
                         if a != b {
                             let key = format!("chainprecedence|{}|{}", a, b);
-                            let value =
-                                if is_chain_precedence_satisfied(&trace, &act_idxs, a, b) {
-                                    1
-                                } else {
-                                    -1
-                                };
+                            let value = if is_chain_precedence_satisfied(&trace, &act_idxs, a, b) {
+                                1
+                            } else {
+                                -1
+                            };
                             rules.insert(key, value);
                         }
                     }
@@ -424,44 +436,48 @@ fn get_rules_from_table(
     let n_rows = table.len();
 
     // Auto-select thresholds if not provided
-    let (min_support, min_conf_ratio) = if min_support_ratio.is_none() && min_confidence_ratio.is_none() {
-        // Find best rule by support * confidence
-        let mut best_prod = 0.0;
-        let mut best_support = 0;
-        for rules_row in table {
-            for (_key, &value) in rules_row {
-                if value != 0 {
-                    let support = rules_row.len();
-                    let confidence = if value > 0 { 1 } else { 0 };
-                    let prod = (support as f64) * (confidence as f64);
-                    if prod > best_prod {
-                        best_prod = prod;
-                        best_support = support;
+    let (min_support, min_conf_ratio) =
+        if min_support_ratio.is_none() && min_confidence_ratio.is_none() {
+            // Find best rule by support * confidence
+            let mut best_prod = 0.0;
+            let mut best_support = 0;
+            for rules_row in table {
+                for &value in rules_row.values() {
+                    if value != 0 {
+                        let support = rules_row.len();
+                        let confidence = if value > 0 { 1 } else { 0 };
+                        let prod = (support as f64) * (confidence as f64);
+                        if prod > best_prod {
+                            best_prod = prod;
+                            best_support = support;
+                        }
                     }
                 }
             }
-        }
 
-        // Use 0.8 multiplier
-        let min_support = (best_support as f64 * 0.8) as usize;
-        let min_conf_ratio = 0.8;
-        (min_support, min_conf_ratio)
-    } else {
-        let min_support = if let Some(ratio) = min_support_ratio {
-            (n_rows as f64 * ratio) as usize
+            // Use 0.8 multiplier
+            let min_support = (best_support as f64 * 0.8) as usize;
+            let min_conf_ratio = 0.8;
+            (min_support, min_conf_ratio)
         } else {
-            0
+            let min_support = if let Some(ratio) = min_support_ratio {
+                (n_rows as f64 * ratio) as usize
+            } else {
+                0
+            };
+            let min_conf_ratio = min_confidence_ratio.unwrap_or(0.0);
+            (min_support, min_conf_ratio)
         };
-        let min_conf_ratio = min_confidence_ratio.unwrap_or(0.0);
-        (min_support, min_conf_ratio)
-    };
 
     // Extract rules meeting thresholds
     let mut all_columns: HashMap<String, Vec<i32>> = HashMap::new();
 
     for rules_row in table {
         for (key, &value) in rules_row {
-            all_columns.entry(key.clone()).or_insert_with(Vec::new).push(value);
+            all_columns
+                .entry(key.clone())
+                .or_default()
+                .push(value);
         }
     }
 
@@ -483,16 +499,13 @@ fn get_rules_from_table(
                     format!("{}|{}", parts[1], parts[2])
                 };
 
-                rules
-                    .entry(template)
-                    .or_insert_with(HashMap::new)
-                    .insert(
-                        rule_key,
-                        DeclareRule {
-                            support,
-                            confidence,
-                        },
-                    );
+                rules.entry(template).or_default().insert(
+                    rule_key,
+                    DeclareRule {
+                        support,
+                        confidence,
+                    },
+                );
             }
         }
     }
@@ -582,7 +595,11 @@ pub fn discover_declare(
         let mut coexistence = HashMap::new();
 
         for (key, rule_ab) in resp_exist {
-            if let Some(rule_ba) = resp_exist.get(&format!("{}|{}", key.split('|').last().unwrap(), key.split('|').next().unwrap())) {
+            if let Some(rule_ba) = resp_exist.get(&format!(
+                "{}|{}",
+                key.split('|').next_back().unwrap(),
+                key.split('|').next().unwrap()
+            )) {
                 coexistence.insert(
                     key.clone(),
                     DeclareRule {

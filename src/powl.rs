@@ -136,7 +136,8 @@ impl PowlArena {
     pub fn add_transition(&mut self, label: Option<String>) -> u32 {
         let id = self.alloc_id();
         let idx = self.nodes.len() as u32;
-        self.nodes.push(PowlNode::Transition(TransitionNode { label, id }));
+        self.nodes
+            .push(PowlNode::Transition(TransitionNode { label, id }));
         idx
     }
 
@@ -162,13 +163,14 @@ impl PowlArena {
         } else {
             activity.clone()
         };
-        self.nodes.push(PowlNode::FrequentTransition(FrequentTransitionNode {
-            label,
-            activity,
-            skippable,
-            selfloop,
-            id,
-        }));
+        self.nodes
+            .push(PowlNode::FrequentTransition(FrequentTransitionNode {
+                label,
+                activity,
+                skippable,
+                selfloop,
+                id,
+            }));
         idx
     }
 
@@ -176,10 +178,11 @@ impl PowlArena {
     pub fn add_strict_partial_order(&mut self, children: Vec<u32>) -> u32 {
         let n = children.len();
         let idx = self.nodes.len() as u32;
-        self.nodes.push(PowlNode::StrictPartialOrder(StrictPartialOrderNode {
-            children,
-            order: BinaryRelation::new(n),
-        }));
+        self.nodes
+            .push(PowlNode::StrictPartialOrder(StrictPartialOrderNode {
+                children,
+                order: BinaryRelation::new(n),
+            }));
         idx
     }
 
@@ -193,17 +196,21 @@ impl PowlArena {
                 order.add_edge(i, j);
             }
         }
-        self.nodes.push(PowlNode::StrictPartialOrder(StrictPartialOrderNode {
-            children,
-            order,
-        }));
+        self.nodes
+            .push(PowlNode::StrictPartialOrder(StrictPartialOrderNode {
+                children,
+                order,
+            }));
         idx
     }
 
     /// Add an OperatorPOWL node (XOR or LOOP).
     pub fn add_operator(&mut self, operator: Operator, children: Vec<u32>) -> u32 {
         let idx = self.nodes.len() as u32;
-        self.nodes.push(PowlNode::OperatorPowl(OperatorPowlNode { operator, children }));
+        self.nodes.push(PowlNode::OperatorPowl(OperatorPowlNode {
+            operator,
+            children,
+        }));
         idx
     }
 
@@ -242,16 +249,10 @@ impl PowlArena {
         match self.nodes.get(root as usize) {
             Some(PowlNode::StrictPartialOrder(spo)) => {
                 if !spo.order.is_irreflexive() {
-                    return Err(format!(
-                        "node {}: partial order is not irreflexive",
-                        root
-                    ));
+                    return Err(format!("node {}: partial order is not irreflexive", root));
                 }
                 if !spo.order.is_transitive() {
-                    return Err(format!(
-                        "node {}: partial order is not transitive",
-                        root
-                    ));
+                    return Err(format!("node {}: partial order is not transitive", root));
                 }
                 for &child in &spo.children {
                     self.validate_partial_orders(child)?;
@@ -418,7 +419,7 @@ mod tests {
         let po = arena.add_strict_partial_order(vec![a, b, c]);
         arena.add_order_edge(po, 0, 1); // A→B
         arena.add_order_edge(po, 1, 2); // B→C
-        // Missing A→C  ⇒ not transitive
+                                        // Missing A→C  ⇒ not transitive
         assert!(arena.validate_partial_orders(po).is_err());
     }
 

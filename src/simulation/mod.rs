@@ -23,4 +23,4 @@
 /// - Petri net playout: Generate traces from a Petri net
 pub mod playout;
 
-pub use playout::{play_out_process_tree, play_out_dfg, PlayOutParameters};
+pub use playout::{play_out_dfg, play_out_process_tree, PlayOutParameters};

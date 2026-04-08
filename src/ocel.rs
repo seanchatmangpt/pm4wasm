@@ -26,11 +26,15 @@
 //! This implementation provides a lightweight OCEL structure compatible with WASM,
 //! avoiding the pandas dependency from pm4py's Python implementation.
 
-pub mod flattening;
 pub mod etot;
+pub mod flattening;
 
-pub use flattening::{flatten_by_object_type, get_object_types, get_event_types, get_summary, OCELSummary};
-pub use etot::{discover_etot, get_object_types_for_activity, get_activities_for_object_type, ETOTResult};
+pub use etot::{
+    discover_etot, get_activities_for_object_type, get_object_types_for_activity, ETOTResult,
+};
+pub use flattening::{
+    flatten_by_object_type, get_event_types, get_object_types, get_summary, OCELSummary,
+};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -46,6 +50,7 @@ use std::collections::HashMap;
 /// - Customer #456 (type: "customer")
 /// - Item #789 (type: "item")
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct OCEL {
     /// All events in the log
     pub events: Vec<OCELEvent>,
@@ -128,18 +133,6 @@ impl Default for OCELGlobals {
     }
 }
 
-impl Default for OCEL {
-    fn default() -> Self {
-        OCEL {
-            events: Vec::new(),
-            objects: Vec::new(),
-            relations: Vec::new(),
-            globals: OCELGlobals::default(),
-            object_to_object: Vec::new(),
-            event_to_event: Vec::new(),
-        }
-    }
-}
 
 impl OCEL {
     /// Create a new empty OCEL.
@@ -176,7 +169,7 @@ impl OCEL {
 
         let mut objects = Vec::new();
         for obj in &self.objects {
-            if object_ids.iter().any(|id| *id == &obj.id) {
+            if object_ids.contains(&&obj.id) {
                 objects.push(obj);
             }
         }
@@ -194,7 +187,7 @@ impl OCEL {
 
         let mut events = Vec::new();
         for event in &self.events {
-            if event_ids.iter().any(|id| *id == &event.id) {
+            if event_ids.contains(&&event.id) {
                 events.push(event);
             }
         }
@@ -225,8 +218,7 @@ pub fn parse_ocel_json(json: &str) -> Result<OCEL, String> {
 ///
 /// Produces JSON-OCEL format compatible with pm4py.
 pub fn serialize_ocel_json(ocel: &OCEL) -> Result<String, String> {
-    serde_json::to_string_pretty(ocel)
-        .map_err(|e| format!("OCEL JSON serialization error: {}", e))
+    serde_json::to_string_pretty(ocel).map_err(|e| format!("OCEL JSON serialization error: {}", e))
 }
 
 #[cfg(test)]

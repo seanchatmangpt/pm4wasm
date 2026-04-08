@@ -56,37 +56,37 @@
 
 use wasm_bindgen::prelude::*;
 
-mod binary_relation;
-pub mod powl;
-pub mod parser;
 pub mod algorithms;
-pub mod petri_net;
-pub mod process_tree;
-pub mod footprints;
-pub mod conversion;
-pub mod event_log;
-pub mod conformance;
+mod binary_relation;
 pub mod complexity;
+pub mod conformance;
+pub mod conversion;
 pub mod diff;
-pub mod streaming;
-pub mod statistics;
 pub mod discovery;
+pub mod event_log;
 pub mod filtering;
+pub mod footprints;
 pub mod llm;
+pub mod ocel;
+pub mod parser;
+pub mod petri_net;
+pub mod powl;
+pub mod process_tree;
 pub mod quality;
 pub mod simulation;
+pub mod statistics;
+pub mod streaming;
 pub mod transformation;
 pub mod trie;
-pub mod ocel;
 
-use binary_relation::BinaryRelation;
-use powl::{PowlArena, PowlNode};
-use parser::parse_powl_model_string;
 use algorithms::simplify as simplify_algo;
 use algorithms::transitive as transitive_algo;
+use binary_relation::BinaryRelation;
 use event_log::EventLog;
-use petri_net::PetriNetResult;
 use footprints::Footprints;
+use parser::parse_powl_model_string;
+use petri_net::PetriNetResult;
+use powl::{PowlArena, PowlNode};
 
 // ─── JS-visible wrapper types ────────────────────────────────────────────────
 
@@ -217,7 +217,10 @@ pub fn powl_to_string(model: &PowlModel) -> String {
 pub fn simplify_powl(model: &PowlModel) -> PowlModel {
     let mut arena = model.arena.clone();
     let new_root = simplify_algo::simplify(&mut arena, model.root);
-    PowlModel { arena, root: new_root }
+    PowlModel {
+        arena,
+        root: new_root,
+    }
 }
 
 /// Convert `XOR(A, tau)` / `LOOP(A, tau)` patterns to `FrequentTransition`
@@ -225,9 +228,11 @@ pub fn simplify_powl(model: &PowlModel) -> PowlModel {
 #[wasm_bindgen]
 pub fn simplify_frequent_transitions(model: &PowlModel) -> PowlModel {
     let mut arena = model.arena.clone();
-    let new_root =
-        simplify_algo::simplify_using_frequent_transitions(&mut arena, model.root);
-    PowlModel { arena, root: new_root }
+    let new_root = simplify_algo::simplify_using_frequent_transitions(&mut arena, model.root);
+    PowlModel {
+        arena,
+        root: new_root,
+    }
 }
 
 /// Return the transitive closure of the ordering relation of a
@@ -283,14 +288,11 @@ pub fn transitive_reduction(
 /// # Errors
 /// Throws if `spo_arena_idx` does not point to a `StrictPartialOrder`.
 #[wasm_bindgen]
-pub fn get_order_of(
-    model: &PowlModel,
-    spo_arena_idx: u32,
-) -> Result<BinaryRelationJs, JsValue> {
+pub fn get_order_of(model: &PowlModel, spo_arena_idx: u32) -> Result<BinaryRelationJs, JsValue> {
     match model.arena.get(spo_arena_idx) {
-        Some(PowlNode::StrictPartialOrder(spo)) => {
-            Ok(BinaryRelationJs { inner: spo.order.clone() })
-        }
+        Some(PowlNode::StrictPartialOrder(spo)) => Ok(BinaryRelationJs {
+            inner: spo.order.clone(),
+        }),
         _ => Err(JsValue::from_str(&format!(
             "node {} is not a StrictPartialOrder",
             spo_arena_idx
@@ -325,7 +327,10 @@ pub fn node_info_json(model: &PowlModel, arena_idx: u32) -> String {
         None => r#"{"type":"Invalid"}"#.to_string(),
         Some(PowlNode::Transition(t)) => {
             let label = t.label.as_deref().unwrap_or("tau");
-            format!(r#"{{"type":"Transition","label":"{}","id":{}}}"#, label, t.id)
+            format!(
+                r#"{{"type":"Transition","label":"{}","id":{}}}"#,
+                label, t.id
+            )
         }
         Some(PowlNode::FrequentTransition(t)) => {
             format!(
@@ -334,8 +339,7 @@ pub fn node_info_json(model: &PowlModel, arena_idx: u32) -> String {
             )
         }
         Some(PowlNode::StrictPartialOrder(spo)) => {
-            let children_json: Vec<String> =
-                spo.children.iter().map(|c| c.to_string()).collect();
+            let children_json: Vec<String> = spo.children.iter().map(|c| c.to_string()).collect();
             let edges: Vec<String> = spo
                 .order
                 .edge_list()
@@ -350,8 +354,7 @@ pub fn node_info_json(model: &PowlModel, arena_idx: u32) -> String {
         }
         Some(PowlNode::OperatorPowl(op)) => {
             let op_str = op.operator.as_str();
-            let children_json: Vec<String> =
-                op.children.iter().map(|c| c.to_string()).collect();
+            let children_json: Vec<String> = op.children.iter().map(|c| c.to_string()).collect();
             format!(
                 r#"{{"type":"OperatorPowl","operator":"{}","children":[{}]}}"#,
                 op_str,
@@ -534,8 +537,7 @@ pub fn precision_etconformance(petri_net_json: &str, log_json: &str) -> Result<S
 #[wasm_bindgen]
 pub fn measure_complexity(model: &PowlModel) -> Result<String, JsValue> {
     let report = complexity::measure(&model.arena, model.root);
-    serde_json::to_string(&report)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&report).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Compute simplicity metric for a Petri net.
@@ -555,7 +557,11 @@ pub fn simplicity_petri_net(petri_net_json: &str) -> Result<f64, JsValue> {
     let num_places = pn.net.places.len();
     let num_transitions = pn.net.transitions.len();
     let num_arcs = pn.net.arcs.len();
-    Ok(complexity::simplicity_arc_degree(num_places, num_transitions, num_arcs))
+    Ok(complexity::simplicity_arc_degree(
+        num_places,
+        num_transitions,
+        num_arcs,
+    ))
 }
 
 /// Compute the structural and behavioural diff between two POWL model strings.
@@ -574,8 +580,7 @@ pub fn diff_models(model_a: &str, model_b: &str) -> Result<String, JsValue> {
     let root_b = parse_powl_model_string(model_b, &mut arena_b)
         .map_err(|e| JsValue::from_str(&format!("Model B parse error: {}", e)))?;
     let d = diff::diff(&arena_a, root_a, &arena_b, root_b);
-    serde_json::to_string(&d)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&d).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Convert a POWL model string to BPMN 2.0 XML.
@@ -710,9 +715,7 @@ pub fn process_tree_to_powl(process_tree_json: &str) -> Result<String, JsValue> 
                 }
             }
             Some(op) => {
-                let children: Vec<u32> = pt.children.iter()
-                    .map(|c| build_powl(c, arena))
-                    .collect();
+                let children: Vec<u32> = pt.children.iter().map(|c| build_powl(c, arena)).collect();
 
                 match op {
                     crate::process_tree::PtOperator::Xor => {
@@ -763,8 +766,7 @@ pub fn get_start_activities(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_start_activities(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get end activities with frequencies from an event log JSON.
@@ -777,8 +779,7 @@ pub fn get_end_activities(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_end_activities(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get all variants (activity sequences) with frequencies and percentages.
@@ -791,8 +792,7 @@ pub fn get_variants(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_variants(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get all event attribute keys with their statistics.
@@ -805,8 +805,7 @@ pub fn get_event_attributes(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_event_attributes(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get all trace attribute keys with their statistics.
@@ -819,8 +818,7 @@ pub fn get_trace_attributes(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_trace_attributes(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get case attributes with their statistics.
@@ -833,8 +831,7 @@ pub fn get_case_attributes(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_case_attributes(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get performance statistics for an event log.
@@ -847,8 +844,7 @@ pub fn get_performance_stats(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::performance::get_performance_stats(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get the average case arrival rate (cases per hour).
@@ -871,8 +867,7 @@ pub fn get_attribute_values(log_json: &str, attribute_key: &str) -> Result<Strin
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_attribute_values(&log, attribute_key);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get case durations as JSON.
@@ -885,8 +880,7 @@ pub fn get_case_durations(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_case_durations_json(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get rework times (time between consecutive same-activity events in a case).
@@ -899,8 +893,7 @@ pub fn get_rework_times(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_rework_times(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get minimum self-distances for each activity.
@@ -913,8 +906,7 @@ pub fn get_minimum_self_distances(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_minimum_self_distances(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get all case durations as a flat JSON array of milliseconds.
@@ -927,8 +919,7 @@ pub fn get_all_case_durations(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_all_case_durations(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get case overlap (fraction of shared prefixes between traces, 0.0–1.0).
@@ -951,8 +942,7 @@ pub fn get_prefixes_from_log(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_prefixes_from_log(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get trace attribute values with frequencies.
@@ -965,8 +955,7 @@ pub fn get_trace_attribute_values(log_json: &str, attribute_key: &str) -> Result
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_trace_attribute_values(&log, attribute_key);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get variants as tuples (activity sequences with count).
@@ -979,8 +968,7 @@ pub fn get_variants_as_tuples(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_variants_as_tuples(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get variants with path durations (total, min, max, avg).
@@ -993,8 +981,7 @@ pub fn get_variants_paths_duration(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_variants_paths_duration(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get cases per activity that show rework (activity appears more than once).
@@ -1007,8 +994,7 @@ pub fn get_rework_cases_per_activity(log_json: &str) -> Result<String, JsValue> 
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = statistics::basic::get_rework_cases_per_activity(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Filtering API ───────────────────────────────────────────────────────────────
@@ -1025,8 +1011,7 @@ pub fn filter_start_activities(log_json: &str, activities_json: &str) -> Result<
     let activities: Vec<String> = serde_json::from_str(activities_json)
         .map_err(|e| JsValue::from_str(&format!("Activities JSON error: {}", e)))?;
     let result = filtering::activities::filter_start_activities(&log, &activities);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only traces ending with specified activities.
@@ -1041,8 +1026,7 @@ pub fn filter_end_activities(log_json: &str, activities_json: &str) -> Result<St
     let activities: Vec<String> = serde_json::from_str(activities_json)
         .map_err(|e| JsValue::from_str(&format!("Activities JSON error: {}", e)))?;
     let result = filtering::activities::filter_end_activities(&log, &activities);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only traces containing a specific activity relation.
@@ -1053,12 +1037,15 @@ pub fn filter_end_activities(log_json: &str, activities_json: &str) -> Result<St
 ///
 /// Mirrors `pm4py.filter_directly_follows_relation()`.
 #[wasm_bindgen]
-pub fn filter_directly_follows_relation(log_json: &str, a: &str, b: &str) -> Result<String, JsValue> {
+pub fn filter_directly_follows_relation(
+    log_json: &str,
+    a: &str,
+    b: &str,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = filtering::activities::filter_directly_follows_relation(&log, a, b);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only traces between two activities.
@@ -1073,8 +1060,7 @@ pub fn filter_between(log_json: &str, act1: &str, act2: &str) -> Result<String, 
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = filtering::activities::filter_between(&log, act1, act2);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only traces starting with a specific prefix.
@@ -1089,8 +1075,7 @@ pub fn filter_prefixes(log_json: &str, prefix_json: &str) -> Result<String, JsVa
     let prefix: Vec<String> = serde_json::from_str(prefix_json)
         .map_err(|e| JsValue::from_str(&format!("Prefix JSON error: {}", e)))?;
     let result = filtering::activities::filter_prefixes(&log, &prefix);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only traces ending with a specific suffix.
@@ -1105,8 +1090,7 @@ pub fn filter_suffixes(log_json: &str, suffix_json: &str) -> Result<String, JsVa
     let suffix: Vec<String> = serde_json::from_str(suffix_json)
         .map_err(|e| JsValue::from_str(&format!("Suffix JSON error: {}", e)))?;
     let result = filtering::activities::filter_suffixes(&log, &suffix);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only traces within a case size range.
@@ -1115,12 +1099,15 @@ pub fn filter_suffixes(log_json: &str, suffix_json: &str) -> Result<String, JsVa
 ///
 /// Mirrors `pm4py.filter_case_size()`.
 #[wasm_bindgen]
-pub fn filter_case_size(log_json: &str, min_size: usize, max_size: usize) -> Result<String, JsValue> {
+pub fn filter_case_size(
+    log_json: &str,
+    min_size: usize,
+    max_size: usize,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = filtering::case_size::filter_case_size(&log, min_size, max_size);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only events within a time range.
@@ -1133,8 +1120,7 @@ pub fn filter_time_range(log_json: &str, start_ms: i64, end_ms: i64) -> Result<S
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = filtering::time::filter_time_range(&log, start_ms, end_ms);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only the top K most frequent variants.
@@ -1147,8 +1133,7 @@ pub fn filter_variants_top_k(log_json: &str, k: usize) -> Result<String, JsValue
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = filtering::variants::filter_variants_top_k(&log, k);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Filter log to keep only variants covering at least a percentage of traces.
@@ -1161,8 +1146,7 @@ pub fn filter_variants_coverage(log_json: &str, min_coverage: f64) -> Result<Str
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = filtering::variants::filter_variants_coverage(&log, min_coverage);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Discovery API ──────────────────────────────────────────────────────────────
@@ -1177,8 +1161,7 @@ pub fn discover_dfg(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::dfg::discover_dfg(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a typed DFG (structured format) from an event log.
@@ -1195,8 +1178,7 @@ pub fn discover_dfg_typed(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::dfg::discover_dfg_typed(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Serialize a DFG result to a canonical JSON string (round-trip safe).
@@ -1208,8 +1190,7 @@ pub fn discover_dfg_typed(log_json: &str) -> Result<String, JsValue> {
 pub fn write_dfg(dfg_json: &str) -> Result<String, JsValue> {
     let dfg: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
         .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
-    serde_json::to_string_pretty(&dfg)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string_pretty(&dfg).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Deserialize a DFG from a JSON string.
@@ -1221,8 +1202,7 @@ pub fn write_dfg(dfg_json: &str) -> Result<String, JsValue> {
 pub fn read_dfg(dfg_json: &str) -> Result<String, JsValue> {
     let dfg: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
         .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
-    serde_json::to_string(&dfg)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&dfg).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a performance DFG with duration annotations on edges.
@@ -1235,8 +1215,7 @@ pub fn discover_performance_dfg(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::dfg::discover_performance_dfg(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover an eventually-follows graph (all activity pairs in any trace).
@@ -1249,8 +1228,7 @@ pub fn discover_eventually_follows_graph(log_json: &str) -> Result<String, JsVal
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::dfg::discover_eventually_follows_graph(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a process tree using the inductive miner.
@@ -1266,8 +1244,7 @@ pub fn discover_process_tree_inductive(log_json: &str) -> Result<String, JsValue
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let tree = discovery::inductive_miner::inductive_miner(&log);
     let simplified = discovery::inductive_miner::simplify_tree(tree);
-    serde_json::to_string(&simplified)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&simplified).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a BPMN model directly from an event log using the inductive miner.
@@ -1285,7 +1262,9 @@ pub fn discover_bpmn_inductive(log_json: &str) -> Result<String, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let tree = discovery::inductive_miner::inductive_miner(&log);
     let simplified = discovery::inductive_miner::simplify_tree(tree);
-    Ok(conversion::process_tree_to_bpmn::process_tree_to_bpmn_xml(&simplified))
+    Ok(conversion::process_tree_to_bpmn::process_tree_to_bpmn_xml(
+        &simplified,
+    ))
 }
 
 /// Discover a Petri net from an event log using the inductive miner.
@@ -1301,8 +1280,7 @@ pub fn discover_petri_net_inductive(log_json: &str) -> Result<String, JsValue> {
     let simplified = discovery::inductive_miner::simplify_tree(tree);
     // Convert process tree to Petri net using existing conversion
     let result = conversion::to_petri_net::from_process_tree(&simplified);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a Petri net from an event log using the alpha miner.
@@ -1315,8 +1293,7 @@ pub fn discover_petri_net_alpha(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::alpha_miner::alpha_miner(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a Petri net using the Alpha+ miner algorithm (extends Alpha with loop handling).
@@ -1332,8 +1309,7 @@ pub fn discover_petri_net_alpha_plus(log_json: &str) -> Result<String, JsValue> 
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::alpha_plus_miner::alpha_plus_miner(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Check whether a Petri net is sound (deadlock-free, bounded, liveness).
@@ -1350,8 +1326,7 @@ pub fn check_soundness(petri_net_json: &str) -> Result<String, JsValue> {
         &pn_result.initial_marking,
         &pn_result.final_marking,
     );
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ============================================================================
@@ -1370,8 +1345,7 @@ pub fn check_soundness(petri_net_json: &str) -> Result<String, JsValue> {
 pub fn parse_ocel_json(ocel_json: &str) -> Result<String, JsValue> {
     let ocel = ocel::parse_ocel_json(ocel_json)
         .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
-    serde_json::to_string(&ocel)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&ocel).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get a summary of an OCEL.
@@ -1385,8 +1359,7 @@ pub fn ocel_get_summary(ocel_json: &str) -> Result<String, JsValue> {
     let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
         .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
     let summary = ocel::get_summary(&ocel);
-    serde_json::to_string(&summary)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&summary).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover Event-Type / Object-Type graph from an OCEL.
@@ -1400,8 +1373,7 @@ pub fn discover_ocel_etot(ocel_json: &str) -> Result<String, JsValue> {
     let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
         .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
     let result = ocel::discover_etot(&ocel);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Flatten an OCEL to a traditional event log by object type.
@@ -1419,10 +1391,9 @@ pub fn discover_ocel_etot(ocel_json: &str) -> Result<String, JsValue> {
 pub fn ocel_flatten_by_object_type(ocel_json: &str, object_type: &str) -> Result<String, JsValue> {
     let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
         .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
-    let log = ocel::flatten_by_object_type(&ocel, object_type)
-        .map_err(|e| JsValue::from_str(&e))?;
-    serde_json::to_string(&log)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    let log =
+        ocel::flatten_by_object_type(&ocel, object_type).map_err(|e| JsValue::from_str(&e))?;
+    serde_json::to_string(&log).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get all object types in an OCEL.
@@ -1436,8 +1407,7 @@ pub fn ocel_get_object_types(ocel_json: &str) -> Result<String, JsValue> {
     let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
         .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
     let types = ocel::get_object_types(&ocel);
-    serde_json::to_string(&types)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&types).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get all event types (activities) in an OCEL.
@@ -1451,8 +1421,7 @@ pub fn ocel_get_event_types(ocel_json: &str) -> Result<String, JsValue> {
     let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
         .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
     let types = ocel::get_event_types(&ocel);
-    serde_json::to_string(&types)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&types).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a Log Skeleton from an event log.
@@ -1466,8 +1435,7 @@ pub fn discover_log_skeleton(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::log_skeleton::discover_log_skeleton(&log, 0.0);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a DECLARE model from an event log.
@@ -1481,8 +1449,7 @@ pub fn discover_declare(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::declare::discover_declare(&log, None, None, None);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a Petri net using the genetic miner (evolutionary algorithm).
@@ -1499,13 +1466,14 @@ pub fn discover_declare(log_json: &str) -> Result<String, JsValue> {
 pub fn discover_petri_net_genetic(log_json: &str, config_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let config: Option<discovery::genetic_miner::GeneticMinerConfig> =
-        if config_json.is_empty() {
-            None
-        } else {
-            Some(serde_json::from_str(config_json)
-                .map_err(|e| JsValue::from_str(&format!("Config JSON error: {}", e)))?)
-        };
+    let config: Option<discovery::genetic_miner::GeneticMinerConfig> = if config_json.is_empty() {
+        None
+    } else {
+        Some(
+            serde_json::from_str(config_json)
+                .map_err(|e| JsValue::from_str(&format!("Config JSON error: {}", e)))?,
+        )
+    };
     let result = discovery::genetic_miner::discover_genetic(&log, config);
     serde_json::to_string(&result)
         .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
@@ -1527,7 +1495,10 @@ pub fn discover_petri_net_genetic(log_json: &str, config_json: &str) -> Result<S
 /// # Errors
 /// Throws if JSON cannot be deserialised.
 #[wasm_bindgen]
-pub fn discover_petri_net_heuristics(log_json: &str, dependency_threshold: f64) -> Result<String, JsValue> {
+pub fn discover_petri_net_heuristics(
+    log_json: &str,
+    dependency_threshold: f64,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let net = discovery::heuristics_miner::discover_heuristics_miner(&log, dependency_threshold);
@@ -1550,7 +1521,10 @@ pub fn discover_petri_net_heuristics(log_json: &str, dependency_threshold: f64) 
 /// # Errors
 /// Throws if JSON cannot be deserialised.
 #[wasm_bindgen]
-pub fn discover_heuristics_net(log_json: &str, dependency_threshold: f64) -> Result<String, JsValue> {
+pub fn discover_heuristics_net(
+    log_json: &str,
+    dependency_threshold: f64,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::heuristics_miner::discover_heuristics_miner(&log, dependency_threshold);
@@ -1777,7 +1751,9 @@ pub fn reduce_petri_net(petri_net_json: &str) -> Result<String, JsValue> {
 pub fn count_reducible_elements(petri_net_json: &str) -> Result<usize, JsValue> {
     let pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
         .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
-    Ok(algorithms::reduction::count_reducible_elements(&pn_result.net))
+    Ok(algorithms::reduction::count_reducible_elements(
+        &pn_result.net,
+    ))
 }
 
 // ─── Temporal Profile API ──────────────────────────────────────────────────────
@@ -1792,8 +1768,7 @@ pub fn discover_temporal_profile(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::temporal_profile::discover_temporal_profile(&log);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Check temporal conformance between an event log and a temporal profile.
@@ -1805,14 +1780,17 @@ pub fn discover_temporal_profile(log_json: &str) -> Result<String, JsValue> {
 /// * `profile_json` - Temporal profile JSON (from discover_temporal_profile)
 /// * `zeta` - Number of standard deviations for threshold (typically 2.0)
 #[wasm_bindgen]
-pub fn check_temporal_conformance(log_json: &str, profile_json: &str, zeta: f64) -> Result<String, JsValue> {
+pub fn check_temporal_conformance(
+    log_json: &str,
+    profile_json: &str,
+    zeta: f64,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let profile: discovery::temporal_profile::TemporalProfile = serde_json::from_str(profile_json)
         .map_err(|e| JsValue::from_str(&format!("Temporal profile JSON error: {}", e)))?;
     let result = discovery::temporal_profile::check_temporal_conformance(&log, &profile, zeta);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Heuristics Miner API ───────────────────────────────────────────────────────
@@ -1827,12 +1805,14 @@ pub fn check_temporal_conformance(log_json: &str, profile_json: &str, zeta: f64)
 /// * `log_json` - Event log JSON
 /// * `dependency_threshold` - Minimum dependency score (0.0 to 1.0, typically 0.5-0.9)
 #[wasm_bindgen]
-pub fn discover_heuristics_miner(log_json: &str, dependency_threshold: f64) -> Result<String, JsValue> {
+pub fn discover_heuristics_miner(
+    log_json: &str,
+    dependency_threshold: f64,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::heuristics_miner::discover_heuristics_miner(&log, dependency_threshold);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Convert a Heuristics Net to a Petri Net.
@@ -1846,8 +1826,7 @@ pub fn heuristics_to_petri_net(net_json: &str) -> Result<String, JsValue> {
     let net: discovery::heuristics_miner::HeuristicsNet = serde_json::from_str(net_json)
         .map_err(|e| JsValue::from_str(&format!("Heuristics net JSON error: {}", e)))?;
     let result = discovery::heuristics_miner::heuristics_to_petri_net(&net);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Footprints API ────────────────────────────────────────────────────────────
@@ -1862,8 +1841,7 @@ pub fn heuristics_to_petri_net(net_json: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn compute_footprints(model: &PowlModel) -> Result<String, JsValue> {
     let fp = footprints::apply(&model.arena, model.root);
-    serde_json::to_string(&fp)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&fp).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Compute footprints-based conformance between an event log and a POWL model.
@@ -1882,8 +1860,7 @@ pub fn conformance_footprints(log_json: &str, model_str: &str) -> Result<String,
 
     let model_fp = footprints::apply(&arena, root);
     let result = conformance::footprints_conf::check(&log, &model_fp);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Event Log Write API ───────────────────────────────────────────────────────
@@ -1922,12 +1899,15 @@ pub fn start() {
 ///
 /// Mirrors `pm4py.filter_trim()`.
 #[wasm_bindgen]
-pub fn filter_trim(log_json: &str, start_activity: &str, end_activity: &str) -> Result<String, JsValue> {
+pub fn filter_trim(
+    log_json: &str,
+    start_activity: &str,
+    end_activity: &str,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let filtered = filtering::activities::filter_trim(&log, start_activity, end_activity);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&filtered).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── LLM API ──────────────────────────────────────────────────────────────────────
@@ -1947,8 +1927,7 @@ pub fn validate_powl_structure(model_str: &str) -> Result<String, JsValue> {
         "verdict": verdict,
         "reasoning": reasoning
     });
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Get few-shot demos for a specific domain.
@@ -1975,8 +1954,7 @@ pub fn generate_code_from_powl(model_str: &str, target: &str) -> Result<String, 
     let mut arena = PowlArena::new();
     let root = parse_powl_model_string(model_str, &mut arena)
         .map_err(|e| JsValue::from_str(&format!("POWL parse error: {}", e)))?;
-    let result = llm::generate_code(&arena, root, target)
-        .map_err(|e| JsValue::from_str(&e))?;
+    let result = llm::generate_code(&arena, root, target).map_err(|e| JsValue::from_str(&e))?;
     let output = serde_json::json!({
         "code": result.code,
         "target": result.target.as_str(),
@@ -1987,8 +1965,7 @@ pub fn generate_code_from_powl(model_str: &str, target: &str) -> Result<String, 
             llm::CodeFormat::Javascript => "javascript",
         }
     });
-    serde_json::to_string(&output)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&output).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Log Footprints (from event log, not model) ──────────────────────────────────
@@ -2007,7 +1984,8 @@ pub fn discover_log_footprints(log_json: &str) -> Result<String, JsValue> {
     let mut start_act: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut end_act: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut activities: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut sequence: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+    let mut sequence: std::collections::HashSet<(String, String)> =
+        std::collections::HashSet::new();
 
     for trace in &log.traces {
         if let Some(first) = trace.events.first() {
@@ -2025,7 +2003,8 @@ pub fn discover_log_footprints(log_json: &str) -> Result<String, JsValue> {
     }
 
     // Bidirectional sequence pairs → parallel
-    let mut parallel: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+    let mut parallel: std::collections::HashSet<(String, String)> =
+        std::collections::HashSet::new();
     let bidirectional: std::collections::HashSet<(String, String)> = sequence
         .iter()
         .filter(|(a, b)| sequence.contains(&(b.clone(), a.clone())))
@@ -2043,8 +2022,7 @@ pub fn discover_log_footprints(log_json: &str) -> Result<String, JsValue> {
         "sequence": sequence,
         "parallel": parallel,
     });
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Utility Functions ──────────────────────────────────────────────────────────
@@ -2060,17 +2038,16 @@ pub fn sort_log(log_json: &str) -> Result<String, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     log.traces.sort_by(|a, b| a.case_id.cmp(&b.case_id));
     for trace in &mut log.traces {
-        trace.events.sort_by(|a, b| {
-            match (&a.timestamp, &b.timestamp) {
+        trace
+            .events
+            .sort_by(|a, b| match (&a.timestamp, &b.timestamp) {
                 (Some(ta), Some(tb)) => ta.cmp(tb),
                 (Some(_), None) => std::cmp::Ordering::Less,
                 (None, Some(_)) => std::cmp::Ordering::Greater,
                 (None, None) => std::cmp::Ordering::Equal,
-            }
-        });
+            });
     }
-    serde_json::to_string(&log)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&log).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Project an event log to keep only the specified attributes.
@@ -2091,8 +2068,7 @@ pub fn project_log(log_json: &str, attributes_json: &str) -> Result<String, JsVa
             event.attributes.retain(|k, _| attrs.contains(k));
         }
     }
-    serde_json::to_string(&log)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&log).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Simulation ───────────────────────────────────────────────────────────────────
@@ -2114,7 +2090,11 @@ pub fn project_log(log_json: &str, attributes_json: &str) -> Result<String, JsVa
 /// # Errors
 /// Throws if JSON cannot be deserialised.
 #[wasm_bindgen]
-pub fn play_out(process_tree_json: &str, num_traces: usize, include_timestamps: bool) -> Result<String, JsValue> {
+pub fn play_out(
+    process_tree_json: &str,
+    num_traces: usize,
+    include_timestamps: bool,
+) -> Result<String, JsValue> {
     let pt: crate::process_tree::ProcessTree = serde_json::from_str(process_tree_json)
         .map_err(|e| JsValue::from_str(&format!("Process tree JSON error: {}", e)))?;
     let params = simulation::PlayOutParameters {
@@ -2123,8 +2103,7 @@ pub fn play_out(process_tree_json: &str, num_traces: usize, include_timestamps: 
         ..Default::default()
     };
     let result = simulation::play_out_process_tree(&pt, &params);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Simulate an event log from a directly-follows graph using playout.
@@ -2163,7 +2142,10 @@ pub fn play_out_dfg(
         dfg.activities.push(activity.clone());
     }
     for edge in &dfg_result.edges {
-        dfg.adj.entry(edge.source.clone()).or_insert_with(Vec::new).push(edge.target.clone());
+        dfg.adj
+            .entry(edge.source.clone())
+            .or_insert_with(Vec::new)
+            .push(edge.target.clone());
     }
 
     let start_activities: Vec<String> = serde_json::from_str(start_activities_json)
@@ -2178,8 +2160,7 @@ pub fn play_out_dfg(
     };
 
     let result = simulation::play_out_dfg(&dfg, &start_activities, &end_activities, &params);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Causal Graph Discovery ─────────────────────────────────────────────────────
@@ -2203,8 +2184,7 @@ pub fn discover_causal_alpha(dfg_json: &str) -> Result<String, JsValue> {
     let dfg: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
         .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
     let result = discovery::causal::discover_causal_alpha(&dfg.edges);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover causal relations from a directly-follows graph (heuristic variant).
@@ -2227,8 +2207,7 @@ pub fn discover_causal_heuristic(dfg_json: &str, threshold: f64) -> Result<Strin
     let dfg: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
         .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
     let result = discovery::causal::discover_causal_heuristic(&dfg.edges, threshold);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 // ─── Transition System Discovery ───────────────────────────────────────────────
@@ -2251,12 +2230,15 @@ pub fn discover_causal_heuristic(dfg_json: &str, threshold: f64) -> Result<Strin
 /// # Errors
 /// Throws if JSON cannot be deserialised.
 #[wasm_bindgen]
-pub fn discover_transition_system(log_json: &str, window: usize, direction: &str) -> Result<String, JsValue> {
+pub fn discover_transition_system(
+    log_json: &str,
+    window: usize,
+    direction: &str,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::transition_system::discover_transition_system(&log, window, direction);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a prefix tree (trie) from an event log.
@@ -2276,12 +2258,14 @@ pub fn discover_transition_system(log_json: &str, window: usize, direction: &str
 /// # Errors
 /// Throws if JSON cannot be deserialised.
 #[wasm_bindgen]
-pub fn discover_prefix_tree(log_json: &str, max_path_length: Option<usize>) -> Result<String, JsValue> {
+pub fn discover_prefix_tree(
+    log_json: &str,
+    max_path_length: Option<usize>,
+) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = transformation::discover_prefix_tree(&log, max_path_length);
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+    serde_json::to_string(&result).map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
 /// Discover a Petri net using ILP miner (STUB - NOT IMPLEMENTED).
@@ -2300,7 +2284,7 @@ pub fn discover_petri_net_ilp(_log_json: &str, _alpha: f64) -> Result<String, Js
     Err(JsValue::from_str(
         "ILP miner is not available in WASM. \
          It requires an external LP solver which cannot be bundled in pure WebAssembly. \
-         Please use `discover_petri_net_inductive()` or `discover_petri_net_heuristics()` instead."
+         Please use `discover_petri_net_inductive()` or `discover_petri_net_heuristics()` instead.",
     ))
 }
 
@@ -2367,7 +2351,8 @@ mod tests {
     #[test]
     fn test_get_children_spo() {
         let mut arena = PowlArena::new();
-        let root = parser::parse_powl_model_string("PO=(nodes={A, B}, order={A-->B})", &mut arena).unwrap();
+        let root = parser::parse_powl_model_string("PO=(nodes={A, B}, order={A-->B})", &mut arena)
+            .unwrap();
         let model = PowlModel { arena, root };
         let children = get_children(&model, root);
         assert_eq!(children.len(), 2);
@@ -2387,25 +2372,23 @@ mod tests {
     #[test]
     fn test_discover_bpmn_inductive_logic() {
         let log = EventLog {
-            traces: vec![
-                event_log::Trace {
-                    case_id: "1".to_string(),
-                    events: vec![
-                        event_log::Event {
-                            name: "A".to_string(),
-                            timestamp: None,
-                            lifecycle: None,
-                            attributes: std::collections::HashMap::new(),
-                        },
-                        event_log::Event {
-                            name: "B".to_string(),
-                            timestamp: None,
-                            lifecycle: None,
-                            attributes: std::collections::HashMap::new(),
-                        },
-                    ],
-                },
-            ],
+            traces: vec![event_log::Trace {
+                case_id: "1".to_string(),
+                events: vec![
+                    event_log::Event {
+                        name: "A".to_string(),
+                        timestamp: None,
+                        lifecycle: None,
+                        attributes: std::collections::HashMap::new(),
+                    },
+                    event_log::Event {
+                        name: "B".to_string(),
+                        timestamp: None,
+                        lifecycle: None,
+                        attributes: std::collections::HashMap::new(),
+                    },
+                ],
+            }],
         };
         // Run the same pipeline as discover_bpmn_inductive but without JsValue
         let tree = discovery::inductive_miner::inductive_miner(&log);
@@ -2428,25 +2411,21 @@ mod tests {
             traces: vec![
                 event_log::Trace {
                     case_id: "1".to_string(),
-                    events: vec![
-                        event_log::Event {
-                            name: "A".to_string(),
-                            timestamp: None,
-                            lifecycle: None,
-                            attributes: std::collections::HashMap::new(),
-                        },
-                    ],
+                    events: vec![event_log::Event {
+                        name: "A".to_string(),
+                        timestamp: None,
+                        lifecycle: None,
+                        attributes: std::collections::HashMap::new(),
+                    }],
                 },
                 event_log::Trace {
                     case_id: "2".to_string(),
-                    events: vec![
-                        event_log::Event {
-                            name: "B".to_string(),
-                            timestamp: None,
-                            lifecycle: None,
-                            attributes: std::collections::HashMap::new(),
-                        },
-                    ],
+                    events: vec![event_log::Event {
+                        name: "B".to_string(),
+                        timestamp: None,
+                        lifecycle: None,
+                        attributes: std::collections::HashMap::new(),
+                    }],
                 },
             ],
         };

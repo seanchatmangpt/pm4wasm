@@ -151,8 +151,7 @@ pub fn compute_precision(
     let total_traces = log.traces.len();
 
     for trace in &log.traces {
-        let (escaping, consumed) =
-            precision_for_trace(net, initial_marking, final_marking, trace);
+        let (escaping, consumed) = precision_for_trace(net, initial_marking, final_marking, trace);
         total_escaping += escaping;
         total_consumed += consumed;
     }

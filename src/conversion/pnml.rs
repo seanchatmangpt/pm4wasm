@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(test)]
+use crate::petri_net::{Arc, Place, Transition};
 /// PNML (Petri Net Markup Language) import/export.
 ///
 /// Supports the PNML 2.0 standard for exchanging Petri nets between tools.
 use crate::petri_net::{Marking, PetriNet, PetriNetResult};
-#[cfg(test)]
-use crate::petri_net::{Arc, Place, Transition};
 use quick_xml::events::Event as XmlEvent;
 use quick_xml::reader::Reader;
 use wasm_bindgen::prelude::*;
@@ -339,8 +339,7 @@ pub fn from_pnml(xml: &str) -> Result<PetriNetResult, String> {
                         }
                     }
                     b"arc" => {
-                        if let (Some(source), Some(target)) =
-                            (arc_source.take(), arc_target.take())
+                        if let (Some(source), Some(target)) = (arc_source.take(), arc_target.take())
                         {
                             net.add_arc(&source, &target);
                         }
@@ -380,19 +379,29 @@ mod tests {
             net: PetriNet {
                 name: "Test Net".to_string(),
                 places: vec![
-                    Place { name: "p1".to_string() },
-                    Place { name: "p2".to_string() },
-                ],
-                transitions: vec![
-                    Transition {
-                        name: "t1".to_string(),
-                        label: Some("A".to_string()),
-                        properties: HashMap::new(),
+                    Place {
+                        name: "p1".to_string(),
+                    },
+                    Place {
+                        name: "p2".to_string(),
                     },
                 ],
+                transitions: vec![Transition {
+                    name: "t1".to_string(),
+                    label: Some("A".to_string()),
+                    properties: HashMap::new(),
+                }],
                 arcs: vec![
-                    Arc { source: "p1".to_string(), target: "t1".to_string(), weight: 1 },
-                    Arc { source: "t1".to_string(), target: "p2".to_string(), weight: 1 },
+                    Arc {
+                        source: "p1".to_string(),
+                        target: "t1".to_string(),
+                        weight: 1,
+                    },
+                    Arc {
+                        source: "t1".to_string(),
+                        target: "p2".to_string(),
+                        weight: 1,
+                    },
                 ],
             },
             initial_marking: vec![("p1".to_string(), 1)].into_iter().collect(),
@@ -459,19 +468,29 @@ mod tests {
             net: PetriNet {
                 name: "RoundTrip".to_string(),
                 places: vec![
-                    Place { name: "p1".to_string() },
-                    Place { name: "p2".to_string() },
-                ],
-                transitions: vec![
-                    Transition {
-                        name: "t1".to_string(),
-                        label: Some("A".to_string()),
-                        properties: HashMap::new(),
+                    Place {
+                        name: "p1".to_string(),
+                    },
+                    Place {
+                        name: "p2".to_string(),
                     },
                 ],
+                transitions: vec![Transition {
+                    name: "t1".to_string(),
+                    label: Some("A".to_string()),
+                    properties: HashMap::new(),
+                }],
                 arcs: vec![
-                    Arc { source: "p1".to_string(), target: "t1".to_string(), weight: 1 },
-                    Arc { source: "t1".to_string(), target: "p2".to_string(), weight: 1 },
+                    Arc {
+                        source: "p1".to_string(),
+                        target: "t1".to_string(),
+                        weight: 1,
+                    },
+                    Arc {
+                        source: "t1".to_string(),
+                        target: "p2".to_string(),
+                        weight: 1,
+                    },
                 ],
             },
             initial_marking: vec![("p1".to_string(), 1)].into_iter().collect(),
@@ -483,7 +502,10 @@ mod tests {
 
         assert_eq!(restored.net.name, original.net.name);
         assert_eq!(restored.net.places.len(), original.net.places.len());
-        assert_eq!(restored.net.transitions.len(), original.net.transitions.len());
+        assert_eq!(
+            restored.net.transitions.len(),
+            original.net.transitions.len()
+        );
         assert_eq!(restored.net.arcs.len(), original.net.arcs.len());
         assert_eq!(restored.initial_marking, original.initial_marking);
         assert_eq!(restored.final_marking, original.final_marking);

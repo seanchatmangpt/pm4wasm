@@ -47,9 +47,7 @@ fn tokenize(s: &str) -> Vec<String> {
                 cur.push(ch);
             }
             ')' | '}' => {
-                if depth > 0 {
-                    depth -= 1;
-                }
+                depth = depth.saturating_sub(1);
                 cur.push(ch);
             }
             ',' if depth == 0 => {
@@ -77,14 +75,9 @@ fn tokenize(s: &str) -> Vec<String> {
 ///
 /// # Errors
 /// Returns a descriptive error string on parse failure.
-pub fn parse_powl_model_string(
-    s: &str,
-    arena: &mut PowlArena,
-) -> Result<u32, String> {
+pub fn parse_powl_model_string(s: &str, arena: &mut PowlArena) -> Result<u32, String> {
     let s = s
-        .replace('\n', "")
-        .replace('\r', "")
-        .replace('\t', "")
+        .replace(['\n', '\r', '\t'], "")
         .trim()
         .to_string();
 
@@ -176,8 +169,7 @@ fn parse_partial_order(s: &str, arena: &mut PowlArena) -> Result<u32, String> {
 /// edge declaration.  Simple tokens are compared directly; complex nodes match
 /// their full repr.
 fn node_label_matches(token: &str, label: &str) -> bool {
-    token.trim() == label.trim()
-        || token.trim().trim_matches('\'') == label.trim()
+    token.trim() == label.trim() || token.trim().trim_matches('\'') == label.trim()
 }
 
 /// Extract the content between a specific `key` and its matching `}`.

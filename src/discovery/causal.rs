@@ -137,23 +137,45 @@ mod tests {
     fn test_causal_alpha_simple() {
         // A → B → C (linear sequence)
         let edges = vec![
-            DFGEdge { source: "A".to_string(), target: "B".to_string(), count: 10 },
-            DFGEdge { source: "B".to_string(), target: "C".to_string(), count: 10 },
+            DFGEdge {
+                source: "A".to_string(),
+                target: "B".to_string(),
+                count: 10,
+            },
+            DFGEdge {
+                source: "B".to_string(),
+                target: "C".to_string(),
+                count: 10,
+            },
         ];
 
         let result = discover_causal_alpha(&edges);
 
         assert_eq!(result.relations.len(), 2);
-        assert_eq!(result.relations.get(&("A".to_string(), "B".to_string())), Some(&1));
-        assert_eq!(result.relations.get(&("B".to_string(), "C".to_string())), Some(&1));
+        assert_eq!(
+            result.relations.get(&("A".to_string(), "B".to_string())),
+            Some(&1)
+        );
+        assert_eq!(
+            result.relations.get(&("B".to_string(), "C".to_string())),
+            Some(&1)
+        );
     }
 
     #[test]
     fn test_causal_alpha_no_loop() {
         // A ⇄ B (bidirectional, not causal)
         let edges = vec![
-            DFGEdge { source: "A".to_string(), target: "B".to_string(), count: 5 },
-            DFGEdge { source: "B".to_string(), target: "A".to_string(), count: 3 },
+            DFGEdge {
+                source: "A".to_string(),
+                target: "B".to_string(),
+                count: 5,
+            },
+            DFGEdge {
+                source: "B".to_string(),
+                target: "A".to_string(),
+                count: 3,
+            },
         ];
 
         let result = discover_causal_alpha(&edges);
@@ -166,13 +188,24 @@ mod tests {
     fn test_causal_heuristic_threshold() {
         // A → B (10 times), B → A (2 times) - strong causality
         let edges = vec![
-            DFGEdge { source: "A".to_string(), target: "B".to_string(), count: 10 },
-            DFGEdge { source: "B".to_string(), target: "A".to_string(), count: 2 },
+            DFGEdge {
+                source: "A".to_string(),
+                target: "B".to_string(),
+                count: 10,
+            },
+            DFGEdge {
+                source: "B".to_string(),
+                target: "A".to_string(),
+                count: 2,
+            },
         ];
 
         let result = discover_causal_heuristic(&edges, 0.8);
 
         // A → B should be causal (10/12 = 0.83 > 0.8)
-        assert_eq!(result.relations.get(&("A".to_string(), "B".to_string())), Some(&833)); // ~0.83 * 1000
+        assert_eq!(
+            result.relations.get(&("A".to_string(), "B".to_string())),
+            Some(&833)
+        ); // ~0.83 * 1000
     }
 }

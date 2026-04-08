@@ -35,7 +35,9 @@ struct Ids {
 }
 
 impl Ids {
-    fn new() -> Self { Ids { counter: 0 } }
+    fn new() -> Self {
+        Ids { counter: 0 }
+    }
     fn next(&mut self, prefix: &str) -> String {
         self.counter += 1;
         format!("{}_{}", prefix, self.counter)
@@ -88,10 +90,8 @@ impl Builder {
                 if let Some(label) = &tr.label {
                     let id = self.ids.next("task");
                     let escaped = xml_escape(label);
-                    self.elements.push(format!(
-                        r#"    <task id="{}" name="{}"/>"#,
-                        id, escaped
-                    ));
+                    self.elements
+                        .push(format!(r#"    <task id="{}" name="{}"/>"#, id, escaped));
                     self.flow(entry, &id);
                     self.flow(&id, exit);
                 } else {
@@ -132,7 +132,7 @@ impl Builder {
                 match operator.as_str() {
                     "X" => {
                         let split = self.ids.next("xor_split");
-                        let join  = self.ids.next("xor_join");
+                        let join = self.ids.next("xor_join");
                         self.elements.push(format!(
                             r#"    <exclusiveGateway id="{}" gatewayDirection="Diverging"/>"#,
                             split
@@ -145,10 +145,10 @@ impl Builder {
                         self.flow(&join, exit);
 
                         let split_c = split.clone();
-                        let join_c  = join.clone();
+                        let join_c = join.clone();
                         for child_idx in children {
                             let child_entry = self.ids.next("p");
-                            let child_exit  = self.ids.next("p");
+                            let child_exit = self.ids.next("p");
                             // Use invisible tasks as virtual connection points
                             self.elements.push(format!(
                                 r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
@@ -168,7 +168,7 @@ impl Builder {
                         // POWL LOOP = *(do, redo)
                         // BPMN: entry → check_gw → do_entry → do → do_exit → decide_gw → exit
                         //                                              └──── redo_entry → redo → redo_exit ──┘
-                        let check  = self.ids.next("loop_check");
+                        let check = self.ids.next("loop_check");
                         let decide = self.ids.next("loop_decide");
                         self.elements.push(format!(
                             r#"    <exclusiveGateway id="{}" gatewayDirection="Converging"/>"#,
@@ -179,10 +179,16 @@ impl Builder {
                             decide
                         ));
 
-                        let do_entry   = self.ids.next("p");
-                        let do_exit    = self.ids.next("p");
-                        self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, do_entry));
-                        self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, do_exit));
+                        let do_entry = self.ids.next("p");
+                        let do_exit = self.ids.next("p");
+                        self.elements.push(format!(
+                            r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                            do_entry
+                        ));
+                        self.elements.push(format!(
+                            r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                            do_exit
+                        ));
 
                         self.flow(entry, &check);
                         self.flow(&check, &do_entry);
@@ -192,12 +198,18 @@ impl Builder {
 
                         if children.len() > 1 {
                             let redo_entry = self.ids.next("p");
-                            let redo_exit  = self.ids.next("p");
-                            self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, redo_entry));
-                            self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, redo_exit));
-                            self.flow(&decide, &redo_entry);  // redo branch
+                            let redo_exit = self.ids.next("p");
+                            self.elements.push(format!(
+                                r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                                redo_entry
+                            ));
+                            self.elements.push(format!(
+                                r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                                redo_exit
+                            ));
+                            self.flow(&decide, &redo_entry); // redo branch
                             self.convert(arena, children[1], &redo_entry, &redo_exit);
-                            self.flow(&redo_exit, &check);    // loop back
+                            self.flow(&redo_exit, &check); // loop back
                         }
                     }
 
@@ -215,7 +227,8 @@ impl Builder {
                     // Empty SPO: silent pass
                     let t = self.ids.next("tau");
                     self.elements.push(format!(
-                        r#"    <serviceTask id="{}" name="" pm4py:silent="true"/>"#, t
+                        r#"    <serviceTask id="{}" name="" pm4py:silent="true"/>"#,
+                        t
                     ));
                     self.flow(entry, &t);
                     self.flow(&t, exit);
@@ -257,18 +270,27 @@ impl Builder {
                         // Single node at this level — no gateway needed
                         let ce = self.ids.next("p");
                         let cx = self.ids.next("p");
-                        self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, ce));
-                        self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, cx));
+                        self.elements.push(format!(
+                            r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                            ce
+                        ));
+                        self.elements.push(format!(
+                            r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                            cx
+                        ));
                         self.flow(&current, &ce);
                         if next != exit {
-                            self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, next));
+                            self.elements.push(format!(
+                                r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                                next
+                            ));
                         }
                         self.convert(arena, group[0], &ce, &cx);
                         self.flow(&cx, &next);
                     } else {
                         // Parallel split/join for concurrent group
                         let and_split = self.ids.next("and_split");
-                        let and_join  = self.ids.next("and_join");
+                        let and_join = self.ids.next("and_join");
                         self.elements.push(format!(
                             r#"    <parallelGateway id="{}" gatewayDirection="Diverging"/>"#,
                             and_split
@@ -279,17 +301,26 @@ impl Builder {
                         ));
                         self.flow(&current, &and_split);
                         if gi < groups.len() - 1 {
-                            self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, next));
+                            self.elements.push(format!(
+                                r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                                next
+                            ));
                         }
                         self.flow(&and_join, &next);
 
                         let split_c = and_split.clone();
-                        let join_c  = and_join.clone();
+                        let join_c = and_join.clone();
                         for &child_idx in group {
                             let ce = self.ids.next("p");
                             let cx = self.ids.next("p");
-                            self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, ce));
-                            self.elements.push(format!(r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, cx));
+                            self.elements.push(format!(
+                                r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                                ce
+                            ));
+                            self.elements.push(format!(
+                                r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                                cx
+                            ));
                             self.flow(&split_c, &ce);
                             self.flow(&cx, &join_c);
                             self.convert(arena, child_idx, &ce, &cx);
@@ -307,7 +338,8 @@ impl Builder {
         if children.is_empty() {
             let t = self.ids.next("tau");
             self.elements.push(format!(
-                r#"    <serviceTask id="{}" name="" pm4py:silent="true"/>"#, t
+                r#"    <serviceTask id="{}" name="" pm4py:silent="true"/>"#,
+                t
             ));
             self.flow(entry, &t);
             self.flow(&t, exit);
@@ -322,7 +354,8 @@ impl Builder {
             } else {
                 let p = self.ids.next("p");
                 self.elements.push(format!(
-                    r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, p
+                    r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+                    p
                 ));
                 p
             };
@@ -350,16 +383,18 @@ pub fn to_bpmn_xml(arena: &PowlArena, root: u32) -> String {
     let mut builder = Builder::new();
 
     let start_id = "startEvent_1".to_string();
-    let end_id   = "endEvent_1".to_string();
+    let end_id = "endEvent_1".to_string();
 
     // Top-level entry/exit connectors
     let proc_entry = builder.ids.next("p");
-    let proc_exit  = builder.ids.next("p");
+    let proc_exit = builder.ids.next("p");
     builder.elements.push(format!(
-        r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, proc_entry
+        r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+        proc_entry
     ));
     builder.elements.push(format!(
-        r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#, proc_exit
+        r#"    <serviceTask id="{}" name="" pm4py:connector="true"/>"#,
+        proc_exit
     ));
 
     builder.flow(&start_id, &proc_entry);

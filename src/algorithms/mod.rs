@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod simplify;
-pub mod transitive;
 pub mod label_replacing;
 pub mod marking_equation;
 pub mod reduction;
+pub mod simplify;
+pub mod transitive;

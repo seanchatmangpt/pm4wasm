@@ -28,8 +28,7 @@
 /// | Xor(children)          | Exclusive gateway split + join              |
 /// | Parallel(children)     | Parallel gateway split + join               |
 /// | Loop(do, redo)         | XOR gateway with back-arc on redo           |
-
-use crate::process_tree::{PtOperator, ProcessTree};
+use crate::process_tree::{ProcessTree, PtOperator};
 
 struct Ids {
     counter: u32,
@@ -81,10 +80,8 @@ impl Builder {
                 if let Some(label) = &tree.label {
                     let id = self.ids.next("task");
                     let escaped = xml_escape(label);
-                    self.elements.push(format!(
-                        r#"    <task id="{}" name="{}"/>"#,
-                        id, escaped
-                    ));
+                    self.elements
+                        .push(format!(r#"    <task id="{}" name="{}"/>"#, id, escaped));
                     self.flow(entry, &id);
                     self.flow(&id, exit);
                 } else {

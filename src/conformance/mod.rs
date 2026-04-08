@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod token_replay;
-pub mod footprints_conf;
-pub mod soundness;
-pub mod precision;
 pub mod alignments;
+pub mod footprints_conf;
+pub mod precision;
+pub mod soundness;
+pub mod token_replay;

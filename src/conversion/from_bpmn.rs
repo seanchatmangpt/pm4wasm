@@ -60,22 +60,24 @@ struct BpmnNode {
 // ─── XML parsing helpers ────────────────────────────────────────────────────
 
 fn attr_value(attrs: &quick_xml::events::attributes::Attributes, key: &[u8]) -> Option<String> {
-    for attr in attrs.clone() {
-        if let Ok(a) = attr {
-            if a.key.as_ref() == key {
-                return String::from_utf8(a.value.to_vec()).ok();
-            }
+    for a in attrs.clone().flatten() {
+        if a.key.as_ref() == key {
+            return String::from_utf8(a.value.to_vec()).ok();
         }
     }
     None
 }
 
-fn classify_element(local_name: &[u8], attrs: &quick_xml::events::attributes::Attributes) -> BpmnNodeType {
+fn classify_element(
+    local_name: &[u8],
+    attrs: &quick_xml::events::attributes::Attributes,
+) -> BpmnNodeType {
     match local_name {
         b"startEvent" => BpmnNodeType::StartEvent,
         b"endEvent" => BpmnNodeType::EndEvent,
         b"task" => BpmnNodeType::Task,
-        b"userTask" | b"serviceTask" | b"sendTask" | b"receiveTask" | b"callActivity" | b"scriptTask" | b"businessRuleTask" => {
+        b"userTask" | b"serviceTask" | b"sendTask" | b"receiveTask" | b"callActivity"
+        | b"scriptTask" | b"businessRuleTask" => {
             let is_connector = attr_value(attrs, b"pm4py:connector").as_deref() == Some("true");
             let is_silent = attr_value(attrs, b"pm4py:silent").as_deref() == Some("true");
             if is_connector {
@@ -94,7 +96,9 @@ fn classify_element(local_name: &[u8], attrs: &quick_xml::events::attributes::At
 }
 
 /// Extract all BPMN elements and sequence flows from the XML.
-fn extract_bpmn_graph(xml: &str) -> Result<(HashMap<String, BpmnNode>, Vec<(String, String)>), String> {
+fn extract_bpmn_graph(
+    xml: &str,
+) -> Result<(HashMap<String, BpmnNode>, Vec<(String, String)>), String> {
     let mut nodes: HashMap<String, BpmnNode> = HashMap::new();
     let mut flows: Vec<(String, String)> = Vec::new();
 
@@ -103,27 +107,32 @@ fn extract_bpmn_graph(xml: &str) -> Result<(HashMap<String, BpmnNode>, Vec<(Stri
 
     let mut buf = Vec::new();
     loop {
-        match reader.read_event_into(&mut buf).map_err(|e| e.to_string())? {
+        match reader
+            .read_event_into(&mut buf)
+            .map_err(|e| e.to_string())?
+        {
             Event::Empty(ref e) | Event::Start(ref e) => {
                 let name = e.name();
                 let tag = name.as_ref();
 
                 match tag {
                     b"task" | b"userTask" | b"serviceTask" | b"sendTask" | b"receiveTask"
-                    | b"callActivity" | b"scriptTask" | b"businessRuleTask"
-                    | b"startEvent" | b"endEvent"
-                    | b"exclusiveGateway" | b"parallelGateway" | b"inclusiveGateway" => {
+                    | b"callActivity" | b"scriptTask" | b"businessRuleTask" | b"startEvent"
+                    | b"endEvent" | b"exclusiveGateway" | b"parallelGateway"
+                    | b"inclusiveGateway" => {
                         let id = attr_value(&e.attributes(), b"id")
                             .unwrap_or_else(|| format!("unknown_{}", nodes.len()));
-                        let name = attr_value(&e.attributes(), b"name")
-                            .unwrap_or_default();
+                        let name = attr_value(&e.attributes(), b"name").unwrap_or_default();
                         let node_type = classify_element(tag, &e.attributes());
 
-                        nodes.insert(id.clone(), BpmnNode {
-                            id,
-                            name,
-                            node_type,
-                        });
+                        nodes.insert(
+                            id.clone(),
+                            BpmnNode {
+                                id,
+                                name,
+                                node_type,
+                            },
+                        );
                     }
                     b"sequenceFlow" => {
                         if let (Some(src), Some(tgt)) = (
@@ -249,9 +258,7 @@ fn find_start_nodes(
         // Find nodes with no incoming edges
         let has_incoming: HashSet<String> = nodes
             .keys()
-            .filter(|id| {
-                outgoing.values().any(|targets| targets.contains(id))
-            })
+            .filter(|id| outgoing.values().any(|targets| targets.contains(id)))
             .cloned()
             .collect();
 
@@ -292,9 +299,8 @@ fn build_subtree(
     let real_children: Vec<String> = children_ids
         .iter()
         .filter(|id| {
-            nodes.get(*id).map_or(true, |n| {
-                n.node_type != BpmnNodeType::EndEvent
-                    && n.node_type != BpmnNodeType::Connector
+            nodes.get(*id).is_none_or(|n| {
+                n.node_type != BpmnNodeType::EndEvent && n.node_type != BpmnNodeType::Connector
             })
         })
         .cloned()
@@ -316,9 +322,7 @@ fn build_subtree(
             }
         }
 
-        BpmnNodeType::EndEvent => {
-            Ok(arena.add_silent_transition())
-        }
+        BpmnNodeType::EndEvent => Ok(arena.add_silent_transition()),
 
         BpmnNodeType::Task => {
             let label = if node.name.is_empty() {
@@ -386,12 +390,19 @@ fn build_subtree(
 
                 if !back_edge_children.is_empty() && !forward_children.is_empty() {
                     // Loop pattern: do-branch and redo-branch
-                    let do_child = build_subtree(arena, &forward_children[0], nodes, outgoing, visited)?;
+                    let do_child =
+                        build_subtree(arena, &forward_children[0], nodes, outgoing, visited)?;
                     let redo_child = if forward_children.len() > 1 {
                         build_subtree(arena, &forward_children[1], nodes, outgoing, visited)?
                     } else {
                         let mut new_visited = HashSet::new();
-                        build_subtree(arena, &back_edge_children[0], nodes, outgoing, &mut new_visited)?
+                        build_subtree(
+                            arena,
+                            &back_edge_children[0],
+                            nodes,
+                            outgoing,
+                            &mut new_visited,
+                        )?
                     };
                     Ok(arena.add_operator(Operator::Loop, vec![do_child, redo_child]))
                 } else {
@@ -524,8 +535,16 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("A"), "Expected 'A' in POWL output, got: {}", result);
-        assert!(result.contains("B"), "Expected 'B' in POWL output, got: {}", result);
+        assert!(
+            result.contains("A"),
+            "Expected 'A' in POWL output, got: {}",
+            result
+        );
+        assert!(
+            result.contains("B"),
+            "Expected 'B' in POWL output, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -546,9 +565,21 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("X"), "Expected XOR operator in POWL output, got: {}", result);
-        assert!(result.contains("A"), "Expected 'A' in POWL output, got: {}", result);
-        assert!(result.contains("B"), "Expected 'B' in POWL output, got: {}", result);
+        assert!(
+            result.contains("X"),
+            "Expected XOR operator in POWL output, got: {}",
+            result
+        );
+        assert!(
+            result.contains("A"),
+            "Expected 'A' in POWL output, got: {}",
+            result
+        );
+        assert!(
+            result.contains("B"),
+            "Expected 'B' in POWL output, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -571,8 +602,16 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("A"), "Expected 'A' in POWL output, got: {}", result);
-        assert!(result.contains("B"), "Expected 'B' in POWL output, got: {}", result);
+        assert!(
+            result.contains("A"),
+            "Expected 'A' in POWL output, got: {}",
+            result
+        );
+        assert!(
+            result.contains("B"),
+            "Expected 'B' in POWL output, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -600,7 +639,11 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("A"), "Expected 'A' in POWL output, got: {}", result);
+        assert!(
+            result.contains("A"),
+            "Expected 'A' in POWL output, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -611,8 +654,16 @@ mod tests {
         let powl_back = bpmn_to_powl_string(&bpmn_xml).unwrap();
 
         // The round-trip should preserve the activities
-        assert!(powl_back.contains("A"), "Round-trip lost activity A, got: {}", powl_back);
-        assert!(powl_back.contains("B"), "Round-trip lost activity B, got: {}", powl_back);
+        assert!(
+            powl_back.contains("A"),
+            "Round-trip lost activity A, got: {}",
+            powl_back
+        );
+        assert!(
+            powl_back.contains("B"),
+            "Round-trip lost activity B, got: {}",
+            powl_back
+        );
     }
 
     #[test]
@@ -621,8 +672,16 @@ mod tests {
         let bpmn_xml = to_bpmn_xml(&arena, root);
         let powl_back = bpmn_to_powl_string(&bpmn_xml).unwrap();
 
-        assert!(powl_back.contains("A"), "Round-trip lost activity A, got: {}", powl_back);
-        assert!(powl_back.contains("B"), "Round-trip lost activity B, got: {}", powl_back);
+        assert!(
+            powl_back.contains("A"),
+            "Round-trip lost activity A, got: {}",
+            powl_back
+        );
+        assert!(
+            powl_back.contains("B"),
+            "Round-trip lost activity B, got: {}",
+            powl_back
+        );
     }
 
     #[test]
@@ -631,7 +690,11 @@ mod tests {
         let bpmn_xml = to_bpmn_xml(&arena, root);
         let powl_back = bpmn_to_powl_string(&bpmn_xml).unwrap();
 
-        assert!(powl_back.contains("A"), "Round-trip lost activity A, got: {}", powl_back);
+        assert!(
+            powl_back.contains("A"),
+            "Round-trip lost activity A, got: {}",
+            powl_back
+        );
     }
 
     #[test]
@@ -640,8 +703,16 @@ mod tests {
         let bpmn_xml = to_bpmn_xml(&arena, root);
         let powl_back = bpmn_to_powl_string(&bpmn_xml).unwrap();
 
-        assert!(powl_back.contains("A"), "Round-trip lost activity A, got: {}", powl_back);
-        assert!(powl_back.contains("B"), "Round-trip lost activity B, got: {}", powl_back);
+        assert!(
+            powl_back.contains("A"),
+            "Round-trip lost activity A, got: {}",
+            powl_back
+        );
+        assert!(
+            powl_back.contains("B"),
+            "Round-trip lost activity B, got: {}",
+            powl_back
+        );
     }
 
     #[test]
@@ -662,7 +733,11 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("A"), "Expected 'A' after connector resolution, got: {}", result);
+        assert!(
+            result.contains("A"),
+            "Expected 'A' after connector resolution, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -678,7 +753,11 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("Review"), "Expected 'Review' from userTask, got: {}", result);
+        assert!(
+            result.contains("Review"),
+            "Expected 'Review' from userTask, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -693,6 +772,10 @@ mod tests {
   </process>
 </definitions>"#;
         let result = bpmn_to_powl_string(bpmn).unwrap();
-        assert!(result.contains("A"), "Expected 'A' in POWL output, got: {}", result);
+        assert!(
+            result.contains("A"),
+            "Expected 'A' in POWL output, got: {}",
+            result
+        );
     }
 }

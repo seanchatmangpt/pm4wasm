@@ -16,7 +16,7 @@
 /// PTML (Process Tree Markup Language) import/export.
 ///
 /// PTML is an XML format for process trees used by ProM and pm4py.
-use crate::process_tree::{PtOperator, ProcessTree};
+use crate::process_tree::{ProcessTree, PtOperator};
 use quick_xml::events::Event as XmlEvent;
 use quick_xml::reader::Reader;
 use wasm_bindgen::prelude::*;
@@ -125,10 +125,8 @@ pub fn from_ptml(xml: &str) -> Result<ProcessTree, String> {
                 let tag_str = String::from_utf8_lossy(tag.as_ref()).to_string();
 
                 // Check if this is closing an operator
-                let is_operator = matches!(
-                    tag_str.as_str(),
-                    "sequence" | "xor" | "parallel" | "loop"
-                );
+                let is_operator =
+                    matches!(tag_str.as_str(), "sequence" | "xor" | "parallel" | "loop");
 
                 if is_operator {
                     // Pop completed node and attach to parent

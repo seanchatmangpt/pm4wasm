@@ -112,7 +112,8 @@ impl Trie {
 
         // Create new child
         let child_idx = self.nodes.len();
-        self.nodes.push(TrieNode::child(label.to_string(), parent_idx, depth));
+        self.nodes
+            .push(TrieNode::child(label.to_string(), parent_idx, depth));
         self.nodes[parent_idx].children.push(child_idx);
         child_idx
     }

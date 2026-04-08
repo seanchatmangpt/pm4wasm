@@ -79,7 +79,10 @@ impl Footprints {
 
 /// Remove parallel pairs from sequence; convert bidirectional sequence pairs
 /// to parallel.  Mirrors Python `fix_fp`.
-fn fix_fp(mut sequence: ActivityPairs, mut parallel: ActivityPairs) -> (ActivityPairs, ActivityPairs) {
+fn fix_fp(
+    mut sequence: ActivityPairs,
+    mut parallel: ActivityPairs,
+) -> (ActivityPairs, ActivityPairs) {
     sequence = sequence.difference(&parallel).cloned().collect();
     let bidirectional: ActivityPairs = sequence
         .iter()
@@ -101,13 +104,10 @@ fn merge_footprints(fps: &[Footprints]) -> Footprints {
     }
     let mut merged = fps[0].clone();
     for fp in &fps[1..] {
-        merged.activities =
-            merged.activities.union(&fp.activities).cloned().collect();
+        merged.activities = merged.activities.union(&fp.activities).cloned().collect();
         merged.skippable = merged.skippable && fp.skippable;
-        merged.sequence =
-            merged.sequence.union(&fp.sequence).cloned().collect();
-        merged.parallel =
-            merged.parallel.union(&fp.parallel).cloned().collect();
+        merged.sequence = merged.sequence.union(&fp.sequence).cloned().collect();
+        merged.parallel = merged.parallel.union(&fp.parallel).cloned().collect();
         if !fp.skippable {
             merged.activities_always_happening = merged
                 .activities_always_happening
@@ -182,16 +182,8 @@ fn footprints_of_loop(do_fp: &Footprints, redo_fp: &Footprints) -> Footprints {
         .union(&redo_fp.activities)
         .cloned()
         .collect();
-    let mut sequence: ActivityPairs = do_fp
-        .sequence
-        .union(&redo_fp.sequence)
-        .cloned()
-        .collect();
-    let parallel: ActivityPairs = do_fp
-        .parallel
-        .union(&redo_fp.parallel)
-        .cloned()
-        .collect();
+    let mut sequence: ActivityPairs = do_fp.sequence.union(&redo_fp.sequence).cloned().collect();
+    let parallel: ActivityPairs = do_fp.parallel.union(&redo_fp.parallel).cloned().collect();
     let skippable = do_fp.skippable;
     let aah: ActivitySet = if !do_fp.skippable {
         do_fp.activities_always_happening.clone()
@@ -314,9 +306,10 @@ fn footprints_of_partial_order(
     // Start nodes: c is a start if no non-skippable predecessor reaches c
     let mut start_activities: ActivitySet = Default::default();
     for (i, fp_c) in children_fps.iter().enumerate() {
-        let is_start = children_fps.iter().enumerate().all(|(pi, fp_p)| {
-            pi == i || fp_p.skippable || !closure[pi].contains(&i)
-        });
+        let is_start = children_fps
+            .iter()
+            .enumerate()
+            .all(|(pi, fp_p)| pi == i || fp_p.skippable || !closure[pi].contains(&i));
         if is_start {
             start_activities = start_activities
                 .union(&fp_c.start_activities)
@@ -328,9 +321,10 @@ fn footprints_of_partial_order(
     // End nodes: c is an end if no non-skippable successor of c exists
     let mut end_activities: ActivitySet = Default::default();
     for (i, fp_c) in children_fps.iter().enumerate() {
-        let is_end = children_fps.iter().enumerate().all(|(qi, fp_q)| {
-            qi == i || fp_q.skippable || !closure[i].contains(&qi)
-        });
+        let is_end = children_fps
+            .iter()
+            .enumerate()
+            .all(|(qi, fp_q)| qi == i || fp_q.skippable || !closure[i].contains(&qi));
         if is_end {
             end_activities = end_activities
                 .union(&fp_c.end_activities)
@@ -357,7 +351,9 @@ fn footprints_of_partial_order(
                 continue;
             }
             let all_skippable_intermediates = children_fps.iter().enumerate().all(|(k, fp_k)| {
-                k == i || k == j || fp_k.skippable
+                k == i
+                    || k == j
+                    || fp_k.skippable
                     || !(closure[i].contains(&k) && closure[k].contains(&j))
             });
             if all_skippable_intermediates {
@@ -433,10 +429,8 @@ pub fn compute(
         Some(PowlNode::OperatorPowl(op)) => {
             let children = op.children.clone();
             let operator = op.operator;
-            let child_fps: Vec<Footprints> = children
-                .iter()
-                .map(|&c| compute(arena, c, cache))
-                .collect();
+            let child_fps: Vec<Footprints> =
+                children.iter().map(|&c| compute(arena, c, cache)).collect();
             match operator {
                 Operator::Xor => footprints_of_xor(&child_fps),
                 Operator::Loop if child_fps.len() == 2 => {
@@ -450,10 +444,8 @@ pub fn compute(
             let children = spo.children.clone();
             let order = spo.order.clone();
             let n = children.len();
-            let child_fps: Vec<Footprints> = children
-                .iter()
-                .map(|&c| compute(arena, c, cache))
-                .collect();
+            let child_fps: Vec<Footprints> =
+                children.iter().map(|&c| compute(arena, c, cache)).collect();
             footprints_of_partial_order(&child_fps, n, &|i, j| order.is_edge(i, j))
         }
     };
@@ -496,7 +488,9 @@ pub fn discover_from_log(log: &crate::event_log::EventLog) -> Footprints {
         for window in events.windows(2) {
             let from = window[0].name.clone();
             let to = window[1].name.clone();
-            *sequence_counts.entry((from.clone(), to.clone())).or_insert(0) += 1;
+            *sequence_counts
+                .entry((from.clone(), to.clone()))
+                .or_insert(0) += 1;
             sequence.insert((from, to));
         }
     }
@@ -521,7 +515,7 @@ pub fn discover_from_log(log: &crate::event_log::EventLog) -> Footprints {
         sequence,
         parallel,
         activities_always_happening: ActivitySet::new(), // Not computed from log
-        min_trace_length: 1, // Simplified; could be computed from log
+        min_trace_length: 1,                             // Simplified; could be computed from log
     }
 }
 
@@ -576,8 +570,16 @@ mod tests {
     fn sequence_po_start_end() {
         let (arena, root) = build("PO=(nodes={A, B}, order={A-->B})");
         let fp = apply(&arena, root);
-        assert!(fp.start_activities.contains("A"), "start: {:?}", fp.start_activities);
-        assert!(fp.end_activities.contains("B"), "end: {:?}", fp.end_activities);
+        assert!(
+            fp.start_activities.contains("A"),
+            "start: {:?}",
+            fp.start_activities
+        );
+        assert!(
+            fp.end_activities.contains("B"),
+            "end: {:?}",
+            fp.end_activities
+        );
         assert!(fp.sequence.contains(&("A".to_string(), "B".to_string())));
     }
 

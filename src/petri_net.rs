@@ -99,7 +99,9 @@ impl PetriNet {
 
     /// Add a place; returns its name.
     pub fn add_place(&mut self, name: &str) -> String {
-        self.places.push(Place { name: name.to_string() });
+        self.places.push(Place {
+            name: name.to_string(),
+        });
         name.to_string()
     }
 
@@ -155,8 +157,7 @@ impl PetriNet {
     pub fn apply_simple_reduction(&mut self) {
         loop {
             let mut reduced = false;
-            let place_names: Vec<String> =
-                self.places.iter().map(|p| p.name.clone()).collect();
+            let place_names: Vec<String> = self.places.iter().map(|p| p.name.clone()).collect();
             for p_name in &place_names {
                 let in_trans: Vec<String> = self
                     .arcs

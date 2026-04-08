@@ -9,14 +9,14 @@
 // This architecture enables the entire "Describe workflow → get executable BPMN"
 // pipeline to work in the browser with data staying client-side.
 
-pub mod judge;
-pub mod demos;
 pub mod codegen;
+pub mod demos;
+pub mod judge;
 
-use crate::powl::PowlArena;
 use crate::parser::parse_powl_model_string;
+use crate::powl::PowlArena;
 
-pub use codegen::{CodegenResult, CodeFormat, CodeTarget, generate_code};
+pub use codegen::{generate_code, CodeFormat, CodeTarget, CodegenResult};
 
 /// Result of natural language to POWL generation
 ///

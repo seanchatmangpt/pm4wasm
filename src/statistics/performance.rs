@@ -57,7 +57,7 @@ pub fn get_performance_stats(log: &EventLog) -> PerformanceStats {
 
     let median_duration = if !durations.is_empty() {
         let mid = durations.len() / 2;
-        if durations.len() % 2 == 0 && mid > 0 {
+        if durations.len().is_multiple_of(2) && mid > 0 {
             (durations[mid - 1].duration_ms + durations[mid].duration_ms) as f64 / 2.0
         } else {
             durations[mid].duration_ms as f64
@@ -66,12 +66,7 @@ pub fn get_performance_stats(log: &EventLog) -> PerformanceStats {
         0.0
     };
 
-    let events_longest = log
-        .traces
-        .iter()
-        .map(|t| t.events.len())
-        .max()
-        .unwrap_or(0);
+    let events_longest = log.traces.iter().map(|t| t.events.len()).max().unwrap_or(0);
 
     let avg_events = if total_cases > 0 {
         total_events as f64 / total_cases as f64

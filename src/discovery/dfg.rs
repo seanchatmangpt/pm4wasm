@@ -80,8 +80,7 @@ pub fn discover_dfg(log: &EventLog) -> DFGResult {
         .collect();
     edges.sort_by(|a, b| b.count.cmp(&a.count));
 
-    let mut start_activities: Vec<(String, usize)> =
-        start_freq.into_iter().collect();
+    let mut start_activities: Vec<(String, usize)> = start_freq.into_iter().collect();
     start_activities.sort_by(|a, b| b.1.cmp(&a.1));
 
     let mut end_activities: Vec<(String, usize)> = end_freq.into_iter().collect();
@@ -190,9 +189,10 @@ pub fn discover_performance_dfg(log: &EventLog) -> PerformanceDFGResult {
             if let (Some(first_ts), Some(last_ts)) =
                 (window[0].timestamp.as_ref(), window[1].timestamp.as_ref())
             {
-                if let (Ok(first), Ok(last)) =
-                    (chrono::DateTime::parse_from_rfc3339(first_ts), chrono::DateTime::parse_from_rfc3339(last_ts))
-                {
+                if let (Ok(first), Ok(last)) = (
+                    chrono::DateTime::parse_from_rfc3339(first_ts),
+                    chrono::DateTime::parse_from_rfc3339(last_ts),
+                ) {
                     let dur = last.timestamp_millis() - first.timestamp_millis();
                     edge_durations
                         .entry((window[0].name.clone(), window[1].name.clone()))
@@ -261,9 +261,7 @@ pub fn discover_eventually_follows_graph(log: &EventLog) -> Vec<DFGEdge> {
                 let src = &trace.events[i].name;
                 let tgt = &trace.events[j].name;
                 if activity_set.contains(tgt.as_str()) {
-                    *edge_freq
-                        .entry((src.clone(), tgt.clone()))
-                        .or_default() += 1;
+                    *edge_freq.entry((src.clone(), tgt.clone())).or_default() += 1;
                 }
             }
         }

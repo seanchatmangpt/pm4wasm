@@ -27,8 +27,8 @@
 use crate::event_log::{EventLog, Trace};
 use crate::petri_net::{Marking, PetriNet};
 use serde::{Deserialize, Serialize};
-use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 // ─── Cost constants ──────────────────────────────────────────────────────────
 
@@ -154,7 +154,12 @@ impl SyncProductNet {
     /// ```
     /// where `tp_i` are trace places, `tp_sink` is the trace sink place,
     /// and `mp_j` are model places.
-    fn build(net: &PetriNet, initial_marking: &Marking, final_marking: &Marking, trace: &Trace) -> Self {
+    fn build(
+        net: &PetriNet,
+        initial_marking: &Marking,
+        final_marking: &Marking,
+        trace: &Trace,
+    ) -> Self {
         let n_trace_events = trace.events.len();
 
         // Trace places: start + one per event
@@ -199,25 +204,39 @@ impl SyncProductNet {
 
         // Build preset/postset helpers for the model
         // For each model transition, pre/post as (place_name, place_idx)
-        let model_trans_pre: Vec<Vec<(String, usize)>> = net.transitions.iter().map(|t| {
-            net.arcs.iter()
-                .filter(|a| a.target == t.name)
-                .filter(|a| net.places.iter().any(|p| p.name == a.source))
-                .filter_map(|a| {
-                    model_place_index.get(&a.source).map(|&idx| (a.source.clone(), idx))
-                })
-                .collect()
-        }).collect();
+        let model_trans_pre: Vec<Vec<(String, usize)>> = net
+            .transitions
+            .iter()
+            .map(|t| {
+                net.arcs
+                    .iter()
+                    .filter(|a| a.target == t.name)
+                    .filter(|a| net.places.iter().any(|p| p.name == a.source))
+                    .filter_map(|a| {
+                        model_place_index
+                            .get(&a.source)
+                            .map(|&idx| (a.source.clone(), idx))
+                    })
+                    .collect()
+            })
+            .collect();
 
-        let model_trans_post: Vec<Vec<(String, usize)>> = net.transitions.iter().map(|t| {
-            net.arcs.iter()
-                .filter(|a| a.source == t.name)
-                .filter(|a| net.places.iter().any(|p| p.name == a.target))
-                .filter_map(|a| {
-                    model_place_index.get(&a.target).map(|&idx| (a.target.clone(), idx))
-                })
-                .collect()
-        }).collect();
+        let model_trans_post: Vec<Vec<(String, usize)>> = net
+            .transitions
+            .iter()
+            .map(|t| {
+                net.arcs
+                    .iter()
+                    .filter(|a| a.source == t.name)
+                    .filter(|a| net.places.iter().any(|p| p.name == a.target))
+                    .filter_map(|a| {
+                        model_place_index
+                            .get(&a.target)
+                            .map(|&idx| (a.target.clone(), idx))
+                    })
+                    .collect()
+            })
+            .collect();
 
         // --- Synchronous transitions (trace_label, model_label) ---
         for (event_idx, event) in trace.events.iter().enumerate() {
@@ -285,7 +304,11 @@ impl SyncProductNet {
         // --- Model move transitions (>>, model_label) ---
         for (model_t_idx, model_t) in net.transitions.iter().enumerate() {
             let is_invisible = model_t.label.is_none();
-            let cost = if is_invisible { STD_TAU_COST } else { STD_MODEL_MOVE_COST };
+            let cost = if is_invisible {
+                STD_TAU_COST
+            } else {
+                STD_MODEL_MOVE_COST
+            };
 
             let mut preset: Vec<(usize, bool, usize)> = Vec::new();
             let mut postset: Vec<(usize, bool, usize)> = Vec::new();
@@ -326,7 +349,10 @@ impl SyncProductNet {
 
     /// Check if a transition is enabled in the given marking.
     fn is_enabled(&self, marking: &[u32], trans: &SyncTransition) -> bool {
-        trans.preset.iter().all(|&(place_idx, _, _)| marking[place_idx] > 0)
+        trans
+            .preset
+            .iter()
+            .all(|&(place_idx, _, _)| marking[place_idx] > 0)
     }
 
     /// Fire a transition, producing a new marking.
@@ -355,7 +381,7 @@ impl SyncProductNet {
     /// all possible consumer transitions.
     fn heuristic(&self, marking: &[u32]) -> f64 {
         // Quick check: if already at goal, h = 0
-        if marking == &self.goal_marking {
+        if marking == self.goal_marking {
             return 0.0;
         }
 
@@ -472,8 +498,16 @@ impl PartialOrd for MinHeapEntry {
 impl Ord for MinHeapEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         // Reverse ordering for min-heap; break ties by g (prefer longer paths)
-        other.f.partial_cmp(&self.f).unwrap_or(Ordering::Equal)
-            .then_with(|| self.state.g.partial_cmp(&other.state.g).unwrap_or(Ordering::Equal))
+        other
+            .f
+            .partial_cmp(&self.f)
+            .unwrap_or(Ordering::Equal)
+            .then_with(|| {
+                self.state
+                    .g
+                    .partial_cmp(&other.state.g)
+                    .unwrap_or(Ordering::Equal)
+            })
     }
 }
 
@@ -572,14 +606,16 @@ fn astar_search(sync_net: &SyncProductNet) -> Option<AstarState> {
 
 /// Convert a solved A* path into human-readable alignment moves.
 fn path_to_alignment(path: &[usize], sync_net: &SyncProductNet) -> Vec<AlignmentMove> {
-    path.iter().map(|&trans_idx| {
-        let trans = &sync_net.transitions[trans_idx];
-        AlignmentMove {
-            trace_activity: trans.trace_label.clone(),
-            model_activity: trans.model_label.clone(),
-            cost: trans.cost,
-        }
-    }).collect()
+    path.iter()
+        .map(|&trans_idx| {
+            let trans = &sync_net.transitions[trans_idx];
+            AlignmentMove {
+                trace_activity: trans.trace_label.clone(),
+                model_activity: trans.model_label.clone(),
+                cost: trans.cost,
+            }
+        })
+        .collect()
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -831,7 +867,9 @@ mod tests {
         assert!(result.fitness > 0.0);
 
         // Should have a log move for "C" (model_activity = None)
-        let log_moves: Vec<_> = result.alignment.iter()
+        let log_moves: Vec<_> = result
+            .alignment
+            .iter()
             .filter(|m| m.model_activity.is_none())
             .collect();
         assert_eq!(log_moves.len(), 1);
@@ -868,7 +906,9 @@ mod tests {
         assert!(result.cost > 0.0);
 
         // Should have a model move for "C" (trace_activity = None)
-        let model_moves: Vec<_> = result.alignment.iter()
+        let model_moves: Vec<_> = result
+            .alignment
+            .iter()
             .filter(|m| m.trace_activity.is_none())
             .collect();
         assert_eq!(model_moves.len(), 1);
@@ -887,13 +927,17 @@ mod tests {
         // and a sync move for A (cost = 0).
         assert_eq!(result.alignment.len(), 2);
 
-        let model_moves: Vec<_> = result.alignment.iter()
+        let model_moves: Vec<_> = result
+            .alignment
+            .iter()
             .filter(|m| m.trace_activity.is_none())
             .collect();
         assert_eq!(model_moves.len(), 1);
         assert_eq!(model_moves[0].cost, STD_TAU_COST);
 
-        let sync_moves: Vec<_> = result.alignment.iter()
+        let sync_moves: Vec<_> = result
+            .alignment
+            .iter()
             .filter(|m| m.trace_activity.is_some() && m.model_activity.is_some())
             .collect();
         assert_eq!(sync_moves.len(), 1);
@@ -970,9 +1014,7 @@ mod tests {
     fn test_log_alignment_result_serialization() {
         let (net, initial, final_m) = sequential_net();
         let log = EventLog {
-            traces: vec![
-                make_trace("c1", &["A", "B"]),
-            ],
+            traces: vec![make_trace("c1", &["A", "B"])],
         };
         let result = align_log(&net, &initial, &final_m, &log);
 

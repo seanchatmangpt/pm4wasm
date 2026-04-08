@@ -37,10 +37,7 @@ pub fn is_strict_partial_order(rel: &BinaryRelation) -> bool {
 /// Adds edge i→j when (i,j) ∈ EFG and (j,i) ∉ EFG, then closes transitively.
 /// This is the initial order construction used by the Maximal POWL variant:
 /// `maximal_partial_order_cut.py:generate_initial_order`.
-pub fn generate_initial_order_from_efg(
-    n: usize,
-    efg: &BinaryRelation,
-) -> BinaryRelation {
+pub fn generate_initial_order_from_efg(n: usize, efg: &BinaryRelation) -> BinaryRelation {
     let mut order = BinaryRelation::new(n);
     for i in 0..n {
         for j in 0..n {
@@ -71,11 +68,10 @@ pub fn is_valid_order(order: &BinaryRelation, efg: &BinaryRelation) -> bool {
                 continue;
             }
             // If both directions exist in EFG, they must not be ordered
-            if efg.is_edge(i, j) && efg.is_edge(j, i) {
-                if order.is_edge(i, j) || order.is_edge(j, i) {
+            if efg.is_edge(i, j) && efg.is_edge(j, i)
+                && (order.is_edge(i, j) || order.is_edge(j, i)) {
                     return false;
                 }
-            }
         }
     }
     true
@@ -97,10 +93,7 @@ pub fn merge_groups(groups: &mut Vec<Vec<usize>>, a: usize, b: usize) {
 ///
 /// Adds cluster-level edge src_cluster→tgt_cluster when ALL pairs
 /// (i ∈ src, j ∈ tgt) have efg[i][j] = true AND none have efg[j][i] = true.
-pub fn cluster_order_from_efg(
-    clusters: &[Vec<usize>],
-    efg: &BinaryRelation,
-) -> BinaryRelation {
+pub fn cluster_order_from_efg(clusters: &[Vec<usize>], efg: &BinaryRelation) -> BinaryRelation {
     let k = clusters.len();
     let mut order = BinaryRelation::new(k);
     'outer: for (ci, src) in clusters.iter().enumerate() {

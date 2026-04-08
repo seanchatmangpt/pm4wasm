@@ -16,9 +16,8 @@
 /// Event log filtering.
 ///
 /// Mirrors `pm4py.filtering` — filter event logs by activities, variants, time range.
-
 pub mod activities;
 pub mod attributes;
-pub mod variants;
-pub mod time;
 pub mod case_size;
+pub mod time;
+pub mod variants;

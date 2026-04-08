@@ -48,7 +48,8 @@ fn parse_timestamp_ms(ts: &str) -> Option<i64> {
 
     let hour: i64 = time_parts[0].parse().ok()?;
     let minute: i64 = time_parts[1].parse().ok()?;
-    let second: f64 = time_parts.get(2)
+    let second: f64 = time_parts
+        .get(2)
         .and_then(|s| s.split('+').next())
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.0);
@@ -69,7 +70,8 @@ fn parse_timestamp_ms(ts: &str) -> Option<i64> {
 
 /// Get timestamp in milliseconds from an event, defaulting to 0 if missing.
 fn event_timestamp_ms(event: &crate::event_log::Event) -> i64 {
-    event.timestamp
+    event
+        .timestamp
         .as_ref()
         .and_then(|ts| parse_timestamp_ms(ts))
         .unwrap_or(0)
@@ -268,7 +270,9 @@ mod tests {
         let log = parse_csv(csv).unwrap();
         let profile = discover_temporal_profile(&log);
 
-        assert!(profile.pairs.contains_key(&("A".to_string(), "B".to_string())));
+        assert!(profile
+            .pairs
+            .contains_key(&("A".to_string(), "B".to_string())));
         let pair = &profile.pairs[&("A".to_string(), "B".to_string())];
         assert_eq!(pair.count, 2);
         // Mean should be around 90 seconds (60000ms + 120000ms) / 2 = 90000ms

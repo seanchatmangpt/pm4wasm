@@ -108,11 +108,17 @@ fn compute_generalization(
             continue;
         }
         let count = trans_occ.get(&trans.name).copied().unwrap_or(0);
-        penalty_sum += if count > 0 { 1.0 / (count as f64).sqrt() } else { 1.0 };
+        penalty_sum += if count > 0 {
+            1.0 / (count as f64).sqrt()
+        } else {
+            1.0
+        };
     }
 
     let visible_count = net.transitions.iter().filter(|t| t.label.is_some()).count();
-    if visible_count == 0 { return 1.0; }
+    if visible_count == 0 {
+        return 1.0;
+    }
     1.0 - penalty_sum / visible_count as f64
 }
 
@@ -125,41 +131,63 @@ mod tests {
     /// Build a sequential net: source -> A -> p1 -> B -> sink.
     fn seq_net() -> (PetriNet, Marking, Marking) {
         let mut net = PetriNet::new("seq");
-        net.add_place("source"); net.add_place("p1"); net.add_place("sink");
+        net.add_place("source");
+        net.add_place("p1");
+        net.add_place("sink");
         net.add_transition("tA", Some("A".into()));
         net.add_transition("tB", Some("B".into()));
-        net.add_arc("source", "tA"); net.add_arc("tA", "p1");
-        net.add_arc("p1", "tB"); net.add_arc("tB", "sink");
-        let mut im = Marking::new(); im.insert("source".into(), 1);
-        let mut fm = Marking::new(); fm.insert("sink".into(), 1);
+        net.add_arc("source", "tA");
+        net.add_arc("tA", "p1");
+        net.add_arc("p1", "tB");
+        net.add_arc("tB", "sink");
+        let mut im = Marking::new();
+        im.insert("source".into(), 1);
+        let mut fm = Marking::new();
+        fm.insert("sink".into(), 1);
         (net, im, fm)
     }
 
     /// Same as seq_net but with an extra unused visible transition C.
     fn seq_net_with_unused() -> (PetriNet, Marking, Marking) {
         let mut net = PetriNet::new("seq+extra");
-        net.add_place("source"); net.add_place("p1"); net.add_place("p2"); net.add_place("sink");
+        net.add_place("source");
+        net.add_place("p1");
+        net.add_place("p2");
+        net.add_place("sink");
         net.add_transition("tA", Some("A".into()));
         net.add_transition("tB", Some("B".into()));
         net.add_transition("tC", Some("C".into()));
-        net.add_arc("source", "tA"); net.add_arc("tA", "p1");
-        net.add_arc("p1", "tB"); net.add_arc("tB", "p2"); net.add_arc("p2", "sink");
-        net.add_arc("source", "tC"); net.add_arc("tC", "sink");
-        let mut im = Marking::new(); im.insert("source".into(), 1);
-        let mut fm = Marking::new(); fm.insert("sink".into(), 1);
+        net.add_arc("source", "tA");
+        net.add_arc("tA", "p1");
+        net.add_arc("p1", "tB");
+        net.add_arc("tB", "p2");
+        net.add_arc("p2", "sink");
+        net.add_arc("source", "tC");
+        net.add_arc("tC", "sink");
+        let mut im = Marking::new();
+        im.insert("source".into(), 1);
+        let mut fm = Marking::new();
+        fm.insert("sink".into(), 1);
         (net, im, fm)
     }
 
     fn make_event(name: &str) -> Event {
-        Event { name: name.into(), timestamp: None, lifecycle: None, attributes: HashMap::new() }
+        Event {
+            name: name.into(),
+            timestamp: None,
+            lifecycle: None,
+            attributes: HashMap::new(),
+        }
     }
 
     fn log_ab(n: usize) -> EventLog {
         EventLog {
-            traces: (0..n).map(|i| Trace {
-                case_id: i.to_string(),
-                events: vec![make_event("A"), make_event("B")],
-            }).collect(),
+            traces: (0..n)
+                .map(|i| Trace {
+                    case_id: i.to_string(),
+                    events: vec![make_event("A"), make_event("B")],
+                })
+                .collect(),
         }
     }
 
@@ -167,7 +195,11 @@ mod tests {
     fn test_generalization_perfect_fit() {
         let (net, im, fm) = seq_net();
         let m = compute_quality(&net, &im, &fm, &log_ab(10));
-        assert!(m.generalization > 0.5, "expected > 0.5, got {:.4}", m.generalization);
+        assert!(
+            m.generalization > 0.5,
+            "expected > 0.5, got {:.4}",
+            m.generalization
+        );
         assert_eq!(m.num_places, 3);
         assert_eq!(m.num_transitions, 2);
         assert_eq!(m.num_arcs, 4);
@@ -180,7 +212,11 @@ mod tests {
         let log = log_ab(10);
         let ok = compute_quality(&net_ok, &im_ok, &fm_ok, &log);
         let extra = compute_quality(&net_extra, &im_extra, &fm_extra, &log);
-        assert!(ok.generalization > extra.generalization,
-            "clean ({:.4}) should beat extra ({:.4})", ok.generalization, extra.generalization);
+        assert!(
+            ok.generalization > extra.generalization,
+            "clean ({:.4}) should beat extra ({:.4})",
+            ok.generalization,
+            extra.generalization
+        );
     }
 }

@@ -67,10 +67,7 @@ pub struct PerformanceSpectrumResult {
 /// silently skipped.
 ///
 /// Returns an empty `measurements` vector when no valid pairs are found.
-pub fn discover_performance_spectrum(
-    log: &EventLog,
-    activity: &str,
-) -> PerformanceSpectrumResult {
+pub fn discover_performance_spectrum(log: &EventLog, activity: &str) -> PerformanceSpectrumResult {
     // Collect raw durations per (activity, next_activity) pair.
     let mut buckets: HashMap<(String, String), Vec<f64>> = HashMap::new();
 

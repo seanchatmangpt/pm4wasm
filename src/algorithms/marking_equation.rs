@@ -26,7 +26,11 @@ pub enum LpError {
     /// Objective can decrease without limit.
     Unbounded,
     /// Dimension mismatch in the inputs.
-    InvalidDimensions { expected_rows: usize, expected_cols: usize, actual: String },
+    InvalidDimensions {
+        expected_rows: usize,
+        expected_cols: usize,
+        actual: String,
+    },
     /// Pivots exhausted without convergence.
     NumericalInstability,
 }
@@ -36,10 +40,20 @@ impl std::fmt::Display for LpError {
         match self {
             Self::Infeasible => write!(f, "LP is infeasible"),
             Self::Unbounded => write!(f, "LP is unbounded"),
-            Self::InvalidDimensions { expected_rows, expected_cols, actual } => {
-                write!(f, "dimension mismatch: expected {}x{}, got {}", expected_rows, expected_cols, actual)
+            Self::InvalidDimensions {
+                expected_rows,
+                expected_cols,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "dimension mismatch: expected {}x{}, got {}",
+                    expected_rows, expected_cols, actual
+                )
             }
-            Self::NumericalInstability => write!(f, "numerical instability: max iterations exceeded"),
+            Self::NumericalInstability => {
+                write!(f, "numerical instability: max iterations exceeded")
+            }
         }
     }
 }
@@ -84,27 +98,32 @@ pub fn solve_marking_equation(
     // Validate dimensions
     if costs.len() != n {
         return Err(LpError::InvalidDimensions {
-            expected_rows: 1, expected_cols: n,
+            expected_rows: 1,
+            expected_cols: n,
             actual: format!("costs.len()={}", costs.len()),
         });
     }
     for row in incidence_matrix.iter() {
         if row.len() != n {
             return Err(LpError::InvalidDimensions {
-                expected_rows: m, expected_cols: n,
+                expected_rows: m,
+                expected_cols: n,
                 actual: format!("row of length {}", row.len()),
             });
         }
     }
     if rhs.len() != m {
         return Err(LpError::InvalidDimensions {
-            expected_rows: m, expected_cols: 1,
+            expected_rows: m,
+            expected_cols: 1,
             actual: format!("rhs.len()={}", rhs.len()),
         });
     }
 
-    let a: Vec<Vec<f64>> = incidence_matrix.iter()
-        .map(|r| r.iter().map(|&v| v as f64).collect()).collect();
+    let a: Vec<Vec<f64>> = incidence_matrix
+        .iter()
+        .map(|r| r.iter().map(|&v| v as f64).collect())
+        .collect();
     let b: Vec<f64> = rhs.iter().map(|&v| v as f64).collect();
 
     // --- Build Phase 1 tableau ---
@@ -114,20 +133,28 @@ pub fn solve_marking_equation(
     let mut tab = vec![vec![0.0; total_cols]; m + 1];
 
     for i in 0..m {
-        for j in 0..n { tab[i][j] = a[i][j]; }
+        for j in 0..n {
+            tab[i][j] = a[i][j];
+        }
         tab[i][n + i] = 1.0; // artificial (identity)
         tab[i][total_cols - 1] = b[i];
         // Flip rows with negative RHS so initial BFS has non-negative values.
         if b[i] < 0.0 {
-            for k in 0..total_cols { tab[i][k] *= -1.0; }
+            for k in 0..total_cols {
+                tab[i][k] *= -1.0;
+            }
         }
     }
 
     // Phase 1 objective: maximise z1 = -sum(a_i).
     // Tableau stores negated maximisation cost: +1 per artificial, then zero basic columns.
-    for i in 0..m { tab[m][n + i] = 1.0; }
     for i in 0..m {
-        for k in 0..total_cols { tab[m][k] -= tab[i][k]; }
+        tab[m][n + i] = 1.0;
+    }
+    for i in 0..m {
+        for k in 0..total_cols {
+            tab[m][k] -= tab[i][k];
+        }
     }
 
     let mut basis: Vec<usize> = (0..m).map(|i| n + i).collect();
@@ -141,8 +168,12 @@ pub fn solve_marking_equation(
     }
 
     // Check artificials left in basis
-    let art_in_basis: Vec<usize> = basis.iter().enumerate()
-        .filter(|(_, &bv)| is_art[bv]).map(|(i, _)| i).collect();
+    let art_in_basis: Vec<usize> = basis
+        .iter()
+        .enumerate()
+        .filter(|(_, &bv)| is_art[bv])
+        .map(|(i, _)| i)
+        .collect();
     for &ri in &art_in_basis {
         if tab[ri][total_cols - 1].abs() > EPS {
             return Err(LpError::Infeasible);
@@ -152,18 +183,26 @@ pub fn solve_marking_equation(
 
     // --- Phase 2: optimise original objective ---
     // Maximise z = -c^T x.  Tableau stores +c_j, then subtract basic contributions.
-    for k in 0..total_cols { tab[m][k] = 0.0; }
-    for j in 0..n { tab[m][j] = costs[j]; }
+    for k in 0..total_cols {
+        tab[m][k] = 0.0;
+    }
+    for j in 0..n {
+        tab[m][j] = costs[j];
+    }
     for (i, &bv) in basis.iter().enumerate() {
         if bv < n {
             let cj = costs[bv];
-            for k in 0..total_cols { tab[m][k] -= cj * tab[i][k]; }
+            for k in 0..total_cols {
+                tab[m][k] -= cj * tab[i][k];
+            }
         }
     }
     // Block artificials from re-entering.
     for j in n..total_vars {
         tab[m][j] = 0.0;
-        for i in 0..m { tab[i][j] = 0.0; }
+        for i in 0..m {
+            tab[i][j] = 0.0;
+        }
     }
 
     match simplex(&mut tab, &mut basis, m, n) {
@@ -181,7 +220,9 @@ pub fn solve_marking_equation(
         }
     }
     for v in solution.iter_mut() {
-        if *v < 0.0 && *v > -EPS { *v = 0.0; }
+        if *v < 0.0 && *v > -EPS {
+            *v = 0.0;
+        }
     }
 
     Ok((optimal_cost, solution))
@@ -191,7 +232,11 @@ pub fn solve_marking_equation(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-enum PivotResult { Optimal, Unbounded, MaxIterations }
+enum PivotResult {
+    Optimal,
+    Unbounded,
+    MaxIterations,
+}
 
 /// Simplex pivoting loop.  Entering variable: most negative reduced cost.
 /// Leaving variable: minimum ratio test with Bland's tie-breaking.
@@ -214,7 +259,8 @@ fn simplex(tab: &mut [Vec<f64>], basis: &mut [usize], m: usize, n_vars: usize) -
             .filter(|&i| tab[i][ec] > EPS)
             .map(|i| (i, tab[i][ncols - 1] / tab[i][ec]))
             .min_by(|a, b| {
-                a.1.partial_cmp(&b.1).unwrap()
+                a.1.partial_cmp(&b.1)
+                    .unwrap()
                     .then_with(|| basis[a.0].cmp(&basis[b.0])) // Bland's rule
             })
             .unzip();
@@ -233,19 +279,35 @@ fn simplex(tab: &mut [Vec<f64>], basis: &mut [usize], m: usize, n_vars: usize) -
 fn do_pivot(tab: &mut [Vec<f64>], pr: usize, col: usize) {
     let ncols = tab[0].len();
     let piv = tab[pr][col];
-    if piv.abs() < EPS { return; }
+    if piv.abs() < EPS {
+        return;
+    }
     let inv = 1.0 / piv;
-    for k in 0..ncols { tab[pr][k] *= inv; }
+    for k in 0..ncols {
+        tab[pr][k] *= inv;
+    }
     for i in 0..tab.len() {
-        if i == pr { continue; }
+        if i == pr {
+            continue;
+        }
         let f = tab[i][col];
-        if f.abs() < EPS { continue; }
-        for k in 0..ncols { tab[i][k] -= f * tab[pr][k]; }
+        if f.abs() < EPS {
+            continue;
+        }
+        for k in 0..ncols {
+            tab[i][k] -= f * tab[pr][k];
+        }
     }
 }
 
 /// Try to replace an artificial basic variable with a non-artificial in the same row.
-fn pivot_out_artificial(tab: &mut [Vec<f64>], basis: &mut [usize], row: usize, n_orig: usize, total: usize) {
+fn pivot_out_artificial(
+    tab: &mut [Vec<f64>],
+    basis: &mut [usize],
+    row: usize,
+    n_orig: usize,
+    total: usize,
+) {
     for j in 0..n_orig {
         if tab[row][j].abs() > EPS {
             do_pivot(tab, row, j);
@@ -286,7 +348,10 @@ mod tests {
     fn test_infeasible() {
         // A=I(2x2), b=[-1,-1] => x must be negative => infeasible
         let a = vec![vec![1, 0], vec![0, 1]];
-        assert_eq!(solve_marking_equation(&a, &[1.0, 1.0], &[-1, -1]), Err(LpError::Infeasible));
+        assert_eq!(
+            solve_marking_equation(&a, &[1.0, 1.0], &[-1, -1]),
+            Err(LpError::Infeasible)
+        );
     }
 
     #[test]

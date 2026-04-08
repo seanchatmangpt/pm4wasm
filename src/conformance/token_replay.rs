@@ -133,10 +133,14 @@ pub(crate) fn fire_silent_enabled(net: &PetriNet, marking: &mut Marking) -> (u32
     let mut total_p = 0u32;
     let mut budget = net.transitions.len() * 4 + 16; // generous but bounded
     loop {
-        if budget == 0 { break; }
+        if budget == 0 {
+            break;
+        }
         let mut fired = false;
         for trans in &net.transitions {
-            if trans.label.is_some() { continue; } // skip visible
+            if trans.label.is_some() {
+                continue;
+            } // skip visible
             let pre = preset(net, &trans.name);
             if !pre.is_empty() && is_enabled(marking, &pre) {
                 let post = postset(net, &trans.name);
@@ -148,7 +152,9 @@ pub(crate) fn fire_silent_enabled(net: &PetriNet, marking: &mut Marking) -> (u32
                 break; // restart to respect new marking
             }
         }
-        if !fired { break; }
+        if !fired {
+            break;
+        }
     }
     (total_c, total_p)
 }
@@ -243,7 +249,11 @@ pub fn replay_trace(
     // Compute fitness
     let trace_is_fit = missing == 0 && remaining == 0;
     let fitness = if produced == 0 && consumed == 0 {
-        if missing == 0 { 1.0 } else { 0.0 }
+        if missing == 0 {
+            1.0
+        } else {
+            0.0
+        }
     } else {
         let c = consumed as f64;
         let p = produced as f64;
@@ -403,10 +413,7 @@ mod tests {
     fn log_level_fitness_all_perfect() {
         let (net, initial, final_m) = sequential_net();
         let log = EventLog {
-            traces: vec![
-                make_trace("c1", &["A", "B"]),
-                make_trace("c2", &["A", "B"]),
-            ],
+            traces: vec![make_trace("c1", &["A", "B"]), make_trace("c2", &["A", "B"])],
         };
         let result = compute_fitness(&net, &initial, &final_m, &log);
         assert_eq!(result.perfectly_fitting_traces, 2);
@@ -419,8 +426,8 @@ mod tests {
         let (net, initial, final_m) = sequential_net();
         let log = EventLog {
             traces: vec![
-                make_trace("c1", &["A", "B"]),  // perfect
-                make_trace("c2", &["A"]),        // imperfect
+                make_trace("c1", &["A", "B"]), // perfect
+                make_trace("c2", &["A"]),      // imperfect
             ],
         };
         let result = compute_fitness(&net, &initial, &final_m, &log);

@@ -29,7 +29,7 @@ pub struct BinaryRelation {
 impl BinaryRelation {
     /// Create an n×n zero matrix.
     pub fn new(n: usize) -> Self {
-        let row_words = if n == 0 { 0 } else { (n + 63) / 64 };
+        let row_words = if n == 0 { 0 } else { n.div_ceil(64) };
         BinaryRelation {
             n,
             row_words,
@@ -118,7 +118,10 @@ impl BinaryRelation {
     /// O(n³) — return a new relation with redundant edges removed.
     /// An edge i→k is redundant if there exists j with edge(i,j) ∧ edge(j,k).
     pub fn get_transitive_reduction(&self) -> Self {
-        assert!(self.is_irreflexive(), "transitive reduction requires irreflexivity");
+        assert!(
+            self.is_irreflexive(),
+            "transitive reduction requires irreflexivity"
+        );
         let mut res = self.clone();
         for i in 0..self.n {
             for j in 0..self.n {
@@ -190,7 +193,7 @@ impl BinaryRelation {
     /// Grow by one node; preserves all existing edges.
     pub fn add_node(&mut self) -> usize {
         let new_n = self.n + 1;
-        let new_row_words = (new_n + 63) / 64;
+        let new_row_words = new_n.div_ceil(64);
         if new_row_words != self.row_words {
             // Row width changes — rebuild matrix
             let mut new_words = vec![0u64; new_n * new_row_words];

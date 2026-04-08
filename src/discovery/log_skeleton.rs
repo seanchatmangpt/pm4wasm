@@ -144,7 +144,7 @@ fn equivalence(
 
     ret0.into_iter()
         .filter(|((a, _), count)| {
-            all_activs.get(a).map_or(false, |&total| {
+            all_activs.get(a).is_some_and(|&total| {
                 *count as f64 >= total as f64 * (1.0 - noise_threshold)
             })
         })
@@ -180,7 +180,7 @@ fn always_after(
     traces_with_a_then_b
         .into_iter()
         .filter(|((a, _), count_ab)| {
-            traces_with_a.get(a).map_or(false, |&count_a| {
+            traces_with_a.get(a).is_some_and(|&count_a| {
                 *count_ab as f64 >= count_a as f64 * (1.0 - noise_threshold)
             })
         })
@@ -216,7 +216,7 @@ fn always_before(
     traces_with_b_then_a
         .into_iter()
         .filter(|((a, _), count_ba)| {
-            traces_with_a.get(a).map_or(false, |&count_a| {
+            traces_with_a.get(a).is_some_and(|&count_a| {
                 *count_ba as f64 >= count_a as f64 * (1.0 - noise_threshold)
             })
         })
@@ -238,14 +238,17 @@ fn never_together(
     for (i, a) in all_activities.iter().enumerate() {
         for b in all_activities.iter().skip(i + 1) {
             if a != b {
-                ret0.insert(((*a).clone(), (*b).clone()), *all_activs.get(*a).unwrap_or(&0));
+                ret0.insert(
+                    ((*a).clone(), (*b).clone()),
+                    *all_activs.get(*a).unwrap_or(&0),
+                );
             }
         }
     }
 
     // Subtract pairs that actually appear together
     for (trace, freq) in logs_traces {
-        let freq_val = *freq;  // Dereference once to get usize
+        let freq_val = *freq; // Dereference once to get usize
         let combos = trace_skel::combos(trace);
         for pair in combos {
             // Check both orderings since combos returns ordered pairs
@@ -264,7 +267,7 @@ fn never_together(
     // Keep pairs that satisfy the threshold
     ret0.into_iter()
         .filter(|((a, _), count)| {
-            all_activs.get(a).map_or(false, |&total| {
+            all_activs.get(a).is_some_and(|&total| {
                 *count as f64 >= total as f64 * (1.0 - noise_threshold)
             })
         })
@@ -289,7 +292,7 @@ fn directly_follows(
 
     ret0.into_iter()
         .filter(|((a, _), count)| {
-            all_activs.get(a).map_or(false, |&total| {
+            all_activs.get(a).is_some_and(|&total| {
                 *count as f64 >= total as f64 * (1.0 - noise_threshold)
             })
         })
@@ -314,7 +317,7 @@ fn activ_freq(
             let freq_value = *freq_map.get(activity).unwrap_or(&0);
             *ret0
                 .entry(activity.clone())
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .entry(freq_value)
                 .or_insert(0) += freq;
         }
@@ -431,7 +434,10 @@ mod tests {
         // Test with noise threshold 0.5 (allows 50% noise)
         let skeleton = discover_log_skeleton(&log, 0.5);
         // With 50% noise tolerance, A->B should appear (2 out of 3 traces)
-        assert!(skeleton.directly_follows.iter().any(|(a, b)| a == "A" && b == "B"));
+        assert!(skeleton
+            .directly_follows
+            .iter()
+            .any(|(a, b)| a == "A" && b == "B"));
     }
 
     #[test]
@@ -445,9 +451,18 @@ mod tests {
         let skeleton = discover_log_skeleton(&log, 0.0);
 
         // B and C never appear together (order doesn't matter)
-        let has_b_never_c = skeleton.never_together.iter().any(|(a, b)| a == "B" && b == "C");
-        let has_c_never_b = skeleton.never_together.iter().any(|(a, b)| a == "C" && b == "B");
-        assert!(has_b_never_c || has_c_never_b, "B and C should never be together");
+        let has_b_never_c = skeleton
+            .never_together
+            .iter()
+            .any(|(a, b)| a == "B" && b == "C");
+        let has_c_never_b = skeleton
+            .never_together
+            .iter()
+            .any(|(a, b)| a == "C" && b == "B");
+        assert!(
+            has_b_never_c || has_c_never_b,
+            "B and C should never be together"
+        );
     }
 
     #[test]

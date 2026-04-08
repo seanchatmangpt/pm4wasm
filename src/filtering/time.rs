@@ -16,7 +16,6 @@
 /// Filter event log by time range.
 ///
 /// Mirrors `pm4py.filter_time_range()`.
-
 use crate::event_log::EventLog;
 use crate::statistics::basic::parse_timestamp;
 

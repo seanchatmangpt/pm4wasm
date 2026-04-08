@@ -21,7 +21,8 @@ impl ValidationResult {
     fn approved() -> Self {
         ValidationResult {
             is_sound: true,
-            reasoning: "✅ Model is structurally sound: deadlock-free, live, and bounded".to_string(),
+            reasoning: "✅ Model is structurally sound: deadlock-free, live, and bounded"
+                .to_string(),
             violations: Vec::new(),
         }
     }
@@ -157,7 +158,7 @@ fn has_exit_condition(arena: &PowlArena, children: &[u32]) -> bool {
                         // XOR provides an exit
                         for xor_child in &op.children {
                             if let Some(PowlNode::Transition(t)) = arena.get(*xor_child) {
-                                if t.label.as_ref().map_or(false, |l| l == "tau") {
+                                if t.label.as_ref().is_some_and(|l| l == "tau") {
                                     return true;
                                 }
                             }

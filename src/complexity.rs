@@ -279,7 +279,7 @@ mod tests {
         let (arena, root) = parse("X(A, B, C)");
         let r = measure(&arena, root);
         assert_eq!(r.cyclomatic, 3); // 1 base + 2 extra branches
-        assert_eq!(r.cfc, 3);        // sum of 3 leaf CFCs
+        assert_eq!(r.cfc, 3); // sum of 3 leaf CFCs
         assert_eq!(r.branching_factor, 3.0);
     }
 
@@ -288,7 +288,7 @@ mod tests {
         let (arena, root) = parse("*(A, B)");
         let r = measure(&arena, root);
         assert_eq!(r.cyclomatic, 2); // 1 base + 1 redo
-        assert_eq!(r.cfc, 2);        // 2 * CFC(A)
+        assert_eq!(r.cfc, 2); // 2 * CFC(A)
     }
 
     #[test]

@@ -79,16 +79,21 @@ impl Builder {
     fn task(&mut self, id: &str, name: &str, join: &str, split: &str) {
         let escaped = xml_escape(name);
         self.elements.push(format!("        <task id=\"{}\">", id));
-        self.elements.push(format!("          <name>{}</name>", escaped));
-        self.elements.push(format!("          <decomposesTo id=\"dt_{}\"/>", id));
-        self.elements.push(format!("          <join code=\"{}\"/>", join));
-        self.elements.push(format!("          <split code=\"{}\"/>", split));
-        self.elements.push(format!("        </task>"));
+        self.elements
+            .push(format!("          <name>{}</name>", escaped));
+        self.elements
+            .push(format!("          <decomposesTo id=\"dt_{}\"/>", id));
+        self.elements
+            .push(format!("          <join code=\"{}\"/>", join));
+        self.elements
+            .push(format!("          <split code=\"{}\"/>", split));
+        self.elements.push("        </task>".to_string());
     }
 
     /// Emit a YAWL `<condition>` element.
     fn condition(&mut self, id: &str) {
-        self.elements.push(format!("        <condition id=\"{}\"/>", id));
+        self.elements
+            .push(format!("        <condition id=\"{}\"/>", id));
     }
 
     /// Recursively convert a POWL node.
@@ -219,13 +224,7 @@ impl Builder {
     }
 
     /// XOR: entry → [merge_c → child_i → fork_c] → exit
-    fn convert_xor(
-        &mut self,
-        arena: &PowlArena,
-        children: &[u32],
-        entry: &str,
-        exit: &str,
-    ) {
+    fn convert_xor(&mut self, arena: &PowlArena, children: &[u32], entry: &str, exit: &str) {
         if children.is_empty() {
             self.flow(entry, exit);
             return;
@@ -254,13 +253,7 @@ impl Builder {
     ///   entry → merge_c → do_entry → do → do_exit → fork_c → exit
     ///                                    ^                    |
     ///                                    └── redo → redo_exit ─┘
-    fn convert_loop(
-        &mut self,
-        arena: &PowlArena,
-        children: &[u32],
-        entry: &str,
-        exit: &str,
-    ) {
+    fn convert_loop(&mut self, arena: &PowlArena, children: &[u32], entry: &str, exit: &str) {
         let merge_c = self.ids.next("c");
         let fork_c = self.ids.next("c");
         self.condition(&merge_c);

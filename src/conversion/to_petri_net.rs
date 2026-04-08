@@ -21,7 +21,7 @@
 /// Returns a [`PetriNetResult`] containing the net plus initial and final markings.
 use crate::petri_net::{Counts, Marking, PetriNet, PetriNetResult};
 use crate::powl::{Operator, PowlArena, PowlNode};
-use crate::process_tree::{PtOperator, ProcessTree};
+use crate::process_tree::{ProcessTree, PtOperator};
 use std::collections::HashMap;
 
 // ─── Counter helpers ──────────────────────────────────────────────────────────
@@ -51,14 +51,8 @@ fn new_visible_trans(
         "activity".to_string(),
         serde_json::Value::String(activity.to_string()),
     );
-    props.insert(
-        "skippable".to_string(),
-        serde_json::Value::Bool(skippable),
-    );
-    props.insert(
-        "selfloop".to_string(),
-        serde_json::Value::Bool(selfloop),
-    );
+    props.insert("skippable".to_string(), serde_json::Value::Bool(skippable));
+    props.insert("selfloop".to_string(), serde_json::Value::Bool(selfloop));
     net.add_transition_with_props(&name, Some(label.to_string()), props)
 }
 
@@ -114,14 +108,7 @@ fn recursively_add_tree(
 
         // ── FrequentTransition ───────────────────────────────────────────────
         Some(PowlNode::FrequentTransition(t)) => {
-            let pt = new_visible_trans(
-                net,
-                counts,
-                &t.label,
-                &t.activity,
-                t.skippable,
-                t.selfloop,
-            );
+            let pt = new_visible_trans(net, counts, &t.label, &t.activity, t.skippable, t.selfloop);
             net.add_arc(initial_place, &pt);
             net.add_arc(&pt, &final_place_name);
         }
@@ -158,14 +145,19 @@ fn recursively_add_tree(
                     // do-body
                     let do_idx = children[0];
                     let int1 = recursively_add_tree(
-                        arena, do_idx, net, &new_init_place, None, counts, false,
+                        arena,
+                        do_idx,
+                        net,
+                        &new_init_place,
+                        None,
+                        counts,
+                        false,
                     );
 
                     // redo-body
                     let redo_idx = children[1];
-                    let int2 = recursively_add_tree(
-                        arena, redo_idx, net, &int1, None, counts, false,
-                    );
+                    let int2 =
+                        recursively_add_tree(arena, redo_idx, net, &int1, None, counts, false);
 
                     // exit branch (silent transition from int1 to final)
                     let exit_trans = new_hidden_trans(net, counts, "skip");
@@ -223,7 +215,13 @@ fn recursively_add_tree(
 
                 // Child subtree: i_place → [child subtree] → f_place
                 recursively_add_tree(
-                    arena, child_idx, net, &i_place, Some(&f_place), counts, false,
+                    arena,
+                    child_idx,
+                    net,
+                    &i_place,
+                    Some(&f_place),
+                    counts,
+                    false,
                 );
 
                 init_places.push(i_place);
@@ -421,13 +419,7 @@ fn add_process_tree_to_net(
 
                 // do-body
                 let do_final = new_place(net, counts);
-                add_process_tree_to_net(
-                    &tree.children[0],
-                    net,
-                    &loop_init,
-                    &do_final,
-                    counts,
-                );
+                add_process_tree_to_net(&tree.children[0], net, &loop_init, &do_final, counts);
 
                 // exit branch
                 let exit = new_hidden_trans(net, counts, "skip");
@@ -437,13 +429,7 @@ fn add_process_tree_to_net(
                 // redo-body (if present)
                 if tree.children.len() > 1 {
                     let redo_final = new_place(net, counts);
-                    add_process_tree_to_net(
-                        &tree.children[1],
-                        net,
-                        &do_final,
-                        &redo_final,
-                        counts,
-                    );
+                    add_process_tree_to_net(&tree.children[1], net, &do_final, &redo_final, counts);
                     let loop_back = new_hidden_trans(net, counts, "loop");
                     net.add_arc(&redo_final, &loop_back);
                     net.add_arc(&loop_back, &loop_init);
@@ -472,7 +458,11 @@ mod tests {
         let result = apply(&arena, root);
         assert!(result.net.places.iter().any(|p| p.name == "source"));
         assert!(result.net.places.iter().any(|p| p.name == "sink"));
-        assert!(result.net.transitions.iter().any(|t| t.label.as_deref() == Some("A")));
+        assert!(result
+            .net
+            .transitions
+            .iter()
+            .any(|t| t.label.as_deref() == Some("A")));
     }
 
     #[test]
@@ -508,8 +498,16 @@ mod tests {
     fn sequence_order_preserves_structure() {
         let (arena, root) = build("PO=(nodes={A, B}, order={A-->B})");
         let result = apply(&arena, root);
-        assert!(result.net.transitions.iter().any(|t| t.label.as_deref() == Some("A")));
-        assert!(result.net.transitions.iter().any(|t| t.label.as_deref() == Some("B")));
+        assert!(result
+            .net
+            .transitions
+            .iter()
+            .any(|t| t.label.as_deref() == Some("A")));
+        assert!(result
+            .net
+            .transitions
+            .iter()
+            .any(|t| t.label.as_deref() == Some("B")));
     }
 
     #[test]
@@ -530,7 +528,11 @@ mod tests {
     fn from_process_tree_single_activity() {
         let tree = ProcessTree::leaf(Some("A".to_string()));
         let result = from_process_tree(&tree);
-        assert!(result.net.transitions.iter().any(|t| t.label.as_deref() == Some("A")));
+        assert!(result
+            .net
+            .transitions
+            .iter()
+            .any(|t| t.label.as_deref() == Some("A")));
     }
 
     #[test]

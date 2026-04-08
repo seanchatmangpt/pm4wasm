@@ -16,7 +16,6 @@
 /// Filter event log by case size (number of events per trace).
 ///
 /// Mirrors `pm4py.filter_case_size()`.
-
 use crate::event_log::EventLog;
 
 /// Filter to keep only traces with event count in [min_size, max_size].

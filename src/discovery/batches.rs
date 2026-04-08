@@ -148,7 +148,11 @@ fn merge_near(mut intervals: Vec<Interval>, max_distance: i64) -> Vec<Interval> 
 
 /// Classify a merged batch interval into a specific batch type based on the
 /// temporal relationship of its constituent executions.
-fn classify_batch(activity: &str, interval: &Interval, executions: &[Execution]) -> Option<BatchInstance> {
+fn classify_batch(
+    activity: &str,
+    interval: &Interval,
+    executions: &[Execution],
+) -> Option<BatchInstance> {
     let size = interval.case_ids.len();
     if size < MIN_BATCH_SIZE {
         return None;
@@ -170,9 +174,7 @@ fn classify_batch(activity: &str, interval: &Interval, executions: &[Execution])
     } else if min_start == max_start || min_end == max_end {
         BatchType::Concurrent
     } else {
-        let is_sequential = batch_execs
-            .windows(2)
-            .all(|w| w[0].end_ts == w[1].start_ts);
+        let is_sequential = batch_execs.windows(2).all(|w| w[0].end_ts == w[1].start_ts);
         if is_sequential {
             BatchType::Sequential
         } else if size >= DISRUPTIVE_THRESHOLD {
@@ -244,13 +246,16 @@ pub fn discover_batches(log: &EventLog) -> BatchDetectionResult {
                 None => continue,
             };
             let ts_str = event.timestamp.clone().unwrap_or_default();
-            activity_execs.entry(event.name.clone()).or_default().push(Execution {
-                start_ts: ts,
-                end_ts: ts,
-                start_str: ts_str.clone(),
-                end_str: ts_str,
-                case_id: trace.case_id.clone(),
-            });
+            activity_execs
+                .entry(event.name.clone())
+                .or_default()
+                .push(Execution {
+                    start_ts: ts,
+                    end_ts: ts,
+                    start_str: ts_str.clone(),
+                    end_str: ts_str,
+                    case_id: trace.case_id.clone(),
+                });
         }
     }
 
@@ -300,8 +305,18 @@ mod tests {
         let traces = vec![Trace {
             case_id: "c1".to_string(),
             events: vec![
-                Event { name: "A".into(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
-                Event { name: "B".into(), timestamp: None, lifecycle: None, attributes: HashMap::new() },
+                Event {
+                    name: "A".into(),
+                    timestamp: None,
+                    lifecycle: None,
+                    attributes: HashMap::new(),
+                },
+                Event {
+                    name: "B".into(),
+                    timestamp: None,
+                    lifecycle: None,
+                    attributes: HashMap::new(),
+                },
             ],
         }];
         assert_eq!(discover_batches(&EventLog { traces }).total_batches, 0);
@@ -310,13 +325,26 @@ mod tests {
     #[test]
     fn test_detects_sequential_batches() {
         let traces = vec![
-            Trace { case_id: "case1".into(), events: vec![event("Check", 0), event("Approve", 3)] },
-            Trace { case_id: "case2".into(), events: vec![event("Check", 1), event("Approve", 4)] },
-            Trace { case_id: "case3".into(), events: vec![event("Check", 2), event("Approve", 5)] },
+            Trace {
+                case_id: "case1".into(),
+                events: vec![event("Check", 0), event("Approve", 3)],
+            },
+            Trace {
+                case_id: "case2".into(),
+                events: vec![event("Check", 1), event("Approve", 4)],
+            },
+            Trace {
+                case_id: "case3".into(),
+                events: vec![event("Check", 2), event("Approve", 5)],
+            },
         ];
         let result = discover_batches(&EventLog { traces });
         assert!(result.total_batches >= 1);
-        let check = result.batches.iter().find(|b| b.activity == "Check").unwrap();
+        let check = result
+            .batches
+            .iter()
+            .find(|b| b.activity == "Check")
+            .unwrap();
         assert_eq!(check.size, 3);
         assert!(check.case_ids.contains(&"case1".into()));
         assert!(check.case_ids.contains(&"case2".into()));
@@ -326,7 +354,10 @@ mod tests {
     #[test]
     fn test_single_event_per_activity_no_batch() {
         let log = EventLog {
-            traces: vec![Trace { case_id: "c1".into(), events: vec![event("A", 0), event("B", 1)] }],
+            traces: vec![Trace {
+                case_id: "c1".into(),
+                events: vec![event("A", 0), event("B", 1)],
+            }],
         };
         assert_eq!(discover_batches(&log).total_batches, 0);
     }
@@ -334,8 +365,14 @@ mod tests {
     #[test]
     fn test_parallel_batch_identical_timestamps() {
         let traces = vec![
-            Trace { case_id: "case1".into(), events: vec![event("Print", 10)] },
-            Trace { case_id: "case2".into(), events: vec![event("Print", 10)] },
+            Trace {
+                case_id: "case1".into(),
+                events: vec![event("Print", 10)],
+            },
+            Trace {
+                case_id: "case2".into(),
+                events: vec![event("Print", 10)],
+            },
         ];
         let result = discover_batches(&EventLog { traces });
         assert_eq!(result.total_batches, 1);
@@ -352,7 +389,11 @@ mod tests {
             })
             .collect();
         let result = discover_batches(&EventLog { traces });
-        let ship = result.batches.iter().find(|b| b.activity == "Ship").unwrap();
+        let ship = result
+            .batches
+            .iter()
+            .find(|b| b.activity == "Ship")
+            .unwrap();
         assert_eq!(ship.size, 6);
         assert_eq!(ship.batch_type, BatchType::Disruptive);
     }

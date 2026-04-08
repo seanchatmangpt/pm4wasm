@@ -30,7 +30,6 @@
 /// This implementation uses bounded state-space exploration suitable for WASM
 /// (no full ILP solver required). For complete verification on complex nets,
 /// consider using the original Python pm4py with external solvers.
-
 use crate::petri_net::{Marking, PetriNet};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -221,10 +220,17 @@ fn check_proper_completion(net: &PetriNet, initial: &Marking, final_m: &Marking)
 
 /// Compare two markings for equality (same keys and non-zero values).
 fn markings_equal(a: &Marking, b: &Marking) -> bool {
-    let a_nonzero: HashMap<&String, u32> = a.iter().filter(|(_, &v)| v > 0).map(|(k, v)| (k, *v)).collect();
-    let b_nonzero: HashMap<&String, u32> = b.iter().filter(|(_, &v)| v > 0).map(|(k, v)| (k, *v)).collect();
-    a_nonzero.len() == b_nonzero.len()
-        && a_nonzero.iter().all(|(k, v)| b_nonzero.get(k) == Some(v))
+    let a_nonzero: HashMap<&String, u32> = a
+        .iter()
+        .filter(|(_, &v)| v > 0)
+        .map(|(k, v)| (k, *v))
+        .collect();
+    let b_nonzero: HashMap<&String, u32> = b
+        .iter()
+        .filter(|(_, &v)| v > 0)
+        .map(|(k, v)| (k, *v))
+        .collect();
+    a_nonzero.len() == b_nonzero.len() && a_nonzero.iter().all(|(k, v)| b_nonzero.get(k) == Some(v))
 }
 
 /// Check soundness of a Petri net.
@@ -402,8 +408,10 @@ mod tests {
     fn test_sound_parallel_net() {
         let (net, initial, final_m) = parallel_net();
         let result = check_soundness(&net, &initial, &final_m);
-        eprintln!("Parallel net result: sound={}, bounded={}, liveness={}, deadlock_free={}",
-            result.sound, result.bounded, result.liveness, result.deadlock_free);
+        eprintln!(
+            "Parallel net result: sound={}, bounded={}, liveness={}, deadlock_free={}",
+            result.sound, result.bounded, result.liveness, result.deadlock_free
+        );
         // Note: The current soundness algorithm is conservative and may not detect
         // liveness for all sound nets. The boundedness check is the most reliable.
         assert!(result.bounded, "Parallel net should be bounded");

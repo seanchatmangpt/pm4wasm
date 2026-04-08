@@ -40,7 +40,10 @@ struct Dag {
 
 impl Dag {
     fn new(n: usize) -> Self {
-        Dag { n, adj: vec![Vec::new(); n] }
+        Dag {
+            n,
+            adj: vec![Vec::new(); n],
+        }
     }
 
     fn add_edge(&mut self, from: usize, to: usize) {
@@ -94,7 +97,9 @@ impl Dag {
                     stack.push(succ);
                 }
                 while let Some(cur) = stack.pop() {
-                    if visited[cur] { continue; }
+                    if visited[cur] {
+                        continue;
+                    }
                     visited[cur] = true;
                     reach[start][cur] = true;
                     for &succ in &self.adj[cur] {
@@ -109,9 +114,7 @@ impl Dag {
         for i in 0..n {
             for &j in &self.adj[i] {
                 // Keep edge i→j unless some intermediate k (k≠i, k≠j) makes it redundant.
-                let redundant = self.adj[i].iter().any(|&k| {
-                    k != j && reachable[k][j]
-                });
+                let redundant = self.adj[i].iter().any(|&k| k != j && reachable[k][j]);
                 if !redundant {
                     red.add_edge(i, j);
                 }
@@ -125,7 +128,9 @@ impl Dag {
         let mut visited = vec![false; self.n];
         let mut components: Vec<Vec<usize>> = Vec::new();
         for start in 0..self.n {
-            if visited[start] { continue; }
+            if visited[start] {
+                continue;
+            }
             let mut comp = Vec::new();
             let mut queue = std::collections::VecDeque::new();
             queue.push_back(start);
@@ -251,7 +256,9 @@ pub fn apply_recursive(arena: &PowlArena, node_idx: u32) -> ProcessTree {
                 // Each level → PARALLEL or single node; levels → SEQUENCE
                 let mut level_trees: Vec<ProcessTree> = Vec::new();
                 for group in &level_groups {
-                    if group.is_empty() { continue; }
+                    if group.is_empty() {
+                        continue;
+                    }
                     let sub_trees: Vec<ProcessTree> = group
                         .iter()
                         .map(|&li| apply_recursive(arena, spo.children[local_to_global[li]]))

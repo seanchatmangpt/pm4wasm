@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(test)]
+use crate::discovery::dfg::DFGEdge;
 /// DFG (Directly-Follows Graph) serialization and deserialization.
 ///
 /// Provides JSON-based import/export for DFG structures.
 use crate::discovery::dfg::DFGResult;
-#[cfg(test)]
-use crate::discovery::dfg::DFGEdge;
 use wasm_bindgen::prelude::*;
 
 /// Serialize a DFG to JSON string.

@@ -16,7 +16,6 @@
 /// Filter event log by variants.
 ///
 /// Mirrors `pm4py.filter_variants_top_k()` and `pm4py.filter_variants_reaching()`.
-
 use crate::event_log::EventLog;
 
 /// Filter to keep only the top-k most frequent variants.
