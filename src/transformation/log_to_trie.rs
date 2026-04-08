@@ -99,6 +99,7 @@ fn get_variants_from_log(log: &EventLog) -> Vec<Variant> {
 #[derive(Clone, Debug)]
 struct Variant {
     activities: Vec<String>,
+    #[allow(dead_code)]
     count: usize,
 }
 
