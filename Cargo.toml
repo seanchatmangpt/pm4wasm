@@ -1,6 +1,6 @@
 [package]
 name = "pm4wasm"
-version = "0.1.1"
+version = "26.4.8"
 edition = "2021"
 description = "Process mining in Rust/WebAssembly — WASM port of pm4py with LLM integration"
 license = "Apache-2.0"
