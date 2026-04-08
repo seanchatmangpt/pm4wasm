@@ -7,7 +7,7 @@ license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/seanchatmangpt/pm4wasm"
 homepage = "https://github.com/seanchatmangpt/pm4wasm"
-keywords = ["process-mining", "pm4py", "petri-net", "wasm", "webassembly", "conformance-checking", "process-discovery"]
+keywords = ["process-mining", "pm4py", "petri-net", "wasm", "conformance-checking"]
 categories = ["wasm", "science"]
 
 [lib]
