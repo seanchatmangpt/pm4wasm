@@ -1,3 +1,13 @@
+---
+title: "POWL v2 Rust/WASM Architecture"
+type: explanation
+signal: S=(linguistic, explanation, inform, markdown, theory-reference)
+relates_to:
+  - tutorial.md
+  - reference.md
+  - ../chatmangpt/docs/diataxis/explanation/seven-layer-architecture.md
+---
+
 # POWL v2 Rust/WASM Architecture
 
 This document describes the architecture of the POWL v2 Rust/WebAssembly implementation, including module organization, data structures, and key algorithms.

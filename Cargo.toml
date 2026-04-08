@@ -1,8 +1,8 @@
 [package]
 name = "pm4wasm"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-description = "POWL v2 (Partially Ordered Workflow Language) compiled to WebAssembly"
+description = "Process mining in Rust/WebAssembly — WASM port of pm4py with LLM integration"
 license = "Apache-2.0"
 
 [lib]

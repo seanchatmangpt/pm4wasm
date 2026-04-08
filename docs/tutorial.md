@@ -1,3 +1,13 @@
+---
+title: "Getting Started with POWL v2 Rust/WASM"
+type: tutorial
+signal: S=(linguistic, tutorial, direct, markdown, step-by-step)
+relates_to:
+  - reference.md
+  - architecture.md
+  - nl-tutorial.md
+---
+
 # Tutorial: Getting Started with POWL v2 Rust/WASM
 
 ## Learning Objectives

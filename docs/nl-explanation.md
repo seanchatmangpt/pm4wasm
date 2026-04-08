@@ -1,3 +1,13 @@
+---
+title: "How NL → POWL → BPMN Works"
+type: explanation
+signal: S=(linguistic, explanation, inform, markdown, theory-reference)
+relates_to:
+  - nl-tutorial.md
+  - nl-howto.md
+  - llm-integration.md
+---
+
 # Explanation: How NL → POWL → BPMN Works
 
 **What this is:** The conceptual and technical explanation of the NL→POWL→BPMN pipeline. For how-to, see the [tutorial](./nl-tutorial.md) and [recipes](./nl-howto.md).

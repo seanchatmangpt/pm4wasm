@@ -1,3 +1,12 @@
+---
+title: "POWL v2 Troubleshooting Guide"
+type: how-to
+signal: S=(linguistic, how-to, direct, markdown, troubleshooting-guide)
+relates_to:
+  - howto/build-from-source.md
+  - tutorial.md
+---
+
 # Troubleshooting Guide
 
 Common issues and solutions when working with POWL v2 Rust/WASM.

@@ -1,3 +1,12 @@
+---
+title: "Vision 2030: Browser-Native Process Mining"
+type: explanation
+signal: S=(linguistic, report, express, markdown, plan)
+relates_to:
+  - ../README.md
+  - architecture.md
+---
+
 # Vision 2030: POWL Rust/WASM and the Future of Browser-Native Process Mining
 
 ## Where We Are Today

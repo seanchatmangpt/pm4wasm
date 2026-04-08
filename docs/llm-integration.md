@@ -1,3 +1,12 @@
+---
+title: "LLM Integration with Vercel AI SDK"
+type: explanation
+signal: S=(linguistic, explanation, inform, markdown, theory-reference)
+relates_to:
+  - nl-explanation.md
+  - nl-reference.md
+---
+
 # LLM Integration with Vercel AI SDK
 
 The pm4wasm JavaScript API now uses the **Vercel AI SDK** for natural language to POWL generation, supporting multiple LLM providers through a unified interface.

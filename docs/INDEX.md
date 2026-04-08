@@ -1,3 +1,13 @@
+---
+title: "POWL v2 Rust/WASM Documentation Index"
+type: navigation
+signal: S=(linguistic, brief, inform, markdown, minimal)
+relates_to:
+  - ../README.md
+  - tutorial.md
+  - reference.md
+---
+
 # POWL v2 Rust/WASM Documentation
 
 Complete documentation for the POWL (Partially Ordered Workflow Language) Rust/WebAssembly implementation.

@@ -1,3 +1,13 @@
+---
+title: "POWL v2 Code Examples"
+type: reference
+signal: S=(code, reference, inform, markdown, pattern-catalog)
+relates_to:
+  - tutorial.md
+  - quick-reference.md
+  - reference.md
+---
+
 # Example Code Snippets
 
 Practical examples for common POWL v2 Rust/WASM use cases.

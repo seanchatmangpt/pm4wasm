@@ -1,3 +1,13 @@
+---
+title: "POWL v2 Rust/WASM API Reference"
+type: reference
+signal: S=(code, reference, inform, markdown, api-specification)
+relates_to:
+  - tutorial.md
+  - quick-reference.md
+  - nl-reference.md
+---
+
 # API Reference: POWL v2 Rust/WASM
 
 Complete API documentation for the `pm4wasm` library.

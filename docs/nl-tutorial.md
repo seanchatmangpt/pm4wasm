@@ -1,3 +1,13 @@
+---
+title: "Generate a Verified Process Model from Natural Language"
+type: tutorial
+signal: S=(linguistic, tutorial, direct, markdown, step-by-step)
+relates_to:
+  - nl-explanation.md
+  - nl-howto.md
+  - nl-reference.md
+---
+
 # Tutorial: Generate a Verified Process Model from Natural Language
 
 **What you'll learn:** How to go from a text description to a verified BPMN model in under 30 seconds.

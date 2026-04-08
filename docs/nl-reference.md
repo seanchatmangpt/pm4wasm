@@ -1,3 +1,13 @@
+---
+title: "NL → POWL → BPMN API Reference"
+type: reference
+signal: S=(code, reference, inform, markdown, api-specification)
+relates_to:
+  - nl-tutorial.md
+  - nl-howto.md
+  - llm-integration.md
+---
+
 # Reference: NL → POWL → BPMN API
 
 **What this is:** Complete API reference for the NL→POWL→BPMN pipeline. For getting started, see the [tutorial](./nl-tutorial.md).

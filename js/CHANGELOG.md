@@ -88,5 +88,6 @@ All notable changes to pm4wasm will be documented in this file.
 - Footprints extraction
 - Model simplification
 
+[26.4.8]: https://github.com/seanchatmangpt/pm4wasm/releases/tag/v26.4.8
 [26.4.7]: https://github.com/seanchatmangpt/pm4wasm/releases/tag/v26.4.7
 [0.2.0]: https://github.com/seanchatmangpt/pm4wasm/releases/tag/v0.2.0

@@ -1,3 +1,13 @@
+---
+title: "POWL v2 Quick Reference"
+type: reference
+signal: S=(code, reference, inform, markdown, lookup-table)
+relates_to:
+  - tutorial.md
+  - reference.md
+  - examples.md
+---
+
 # Quick Reference Guide
 
 A concise reference for common POWL v2 Rust/WASM operations.

@@ -1,6 +1,6 @@
 {
   "name": "pm4wasm",
-  "version": "26.4.7",
+  "version": "26.4.8",
   "description": "Process mining in Rust/WebAssembly — WASM port of pm4py with LLM integration",
   "license": "Apache-2.0",
   "type": "module",

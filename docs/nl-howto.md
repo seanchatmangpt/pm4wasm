@@ -1,3 +1,13 @@
+---
+title: "NL → POWL Patterns and Recipes"
+type: how-to
+signal: S=(linguistic, how-to, direct, markdown, pattern-catalog)
+relates_to:
+  - nl-tutorial.md
+  - nl-explanation.md
+  - nl-reference.md
+---
+
 # How-To Guide: NL → POWL Patterns and Recipes
 
 **What this is:** Practical recipes for common NL→POWL tasks. Assumes you've completed the [tutorial](./nl-tutorial.md).
