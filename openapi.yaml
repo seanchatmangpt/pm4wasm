@@ -1,0 +1,712 @@
+openapi: 3.0.3
+info:
+  title: pm4wasm SaaS API
+  description: |
+    Browser-native process mining SaaS platform. All compute happens in the browser via WASM;
+    the server handles auth, tenant management, billing, and collaboration synchronization.
+  version: 1.0.0
+  contact:
+    name: pm4py
+    url: https://pm4py.org
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+
+servers:
+  - url: https://api.pm4py.org/v1
+    description: Production
+  - url: https://staging-api.pm4py.org/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local development
+
+tags:
+  - name: auth
+    description: Authentication and authorization
+  - name: tenants
+    description: Tenant management
+  - name: sessions
+    description: Collaborative modeling sessions
+  - name: billing
+    description: Subscription and usage
+  - name: webhooks
+    description: Stripe webhook handling
+
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register new user
+      description: Create a new user account and tenant (free tier)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                name:
+                  type: string
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/oauth/google:
+    get:
+      tags: [auth]
+      summary: Initiate Google OAuth flow
+      parameters:
+        - name: redirect_uri
+          in: query
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to Google
+      x-code-samples:
+        - lang: TypeScript
+          source: |
+            window.location.href = `/v1/auth/oauth/google?redirect_uri=${encodeURIComponent(returnUrl)}`;
+
+  /auth/oauth/google/callback:
+    get:
+      tags: [auth]
+      summary: Google OAuth callback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect back with tokens
+      x-code-samples:
+        - lang: TypeScript
+          source: |
+            // Handled by OAuth middleware, redirects to frontend with JWT in URL hash
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      security:
+        - BearerAuth: []
+      summary: Logout and invalidate tokens
+      responses:
+        '204':
+          description: Logout successful
+
+  /tenants:
+    get:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      summary: List user's tenants
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tenant'
+
+    post:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      summary: Create new tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                plan:
+                  type: string
+                  enum: [free, pro, enterprise]
+                  default: free
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{tenantId}:
+    get:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      summary: Get tenant details
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                settings:
+                  type: object
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+    delete:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      responses:
+        '204':
+          description: Tenant deleted
+
+  /tenants/{tenantId}/members:
+    get:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      summary: List tenant members
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+
+    post:
+      tags: [tenants]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [owner, admin, editor, viewer]
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+
+  /sessions:
+    get:
+      tags: [sessions]
+      security:
+        - BearerAuth: []
+      summary: List active sessions
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+
+    post:
+      tags: [sessions]
+      security:
+        - BearerAuth: []
+      summary: Create collaborative session
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                model:
+                  type: string
+                  description: Initial POWL model string
+                isPublic:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{sessionId}:
+    get:
+      tags: [sessions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/sessionId'
+      summary: Get session details
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+    delete:
+      tags: [sessions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/sessionId'
+      responses:
+        '204':
+          description: Session deleted
+
+  /sessions/{sessionId}/join:
+    post:
+      tags: [sessions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/sessionId'
+      summary: Join collaborative session (returns WebSocket ticket)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wsUrl:
+                    type: string
+                  ticket:
+                    type: string
+                  signalingUrl:
+                    type: string
+
+  /billing/portal:
+    post:
+      tags: [billing]
+      security:
+        - BearerAuth: []
+      summary: Create Stripe Customer Portal session
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                returnUrl:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+
+  /billing/checkout:
+    post:
+      tags: [billing]
+      security:
+        - BearerAuth: []
+      summary: Create Stripe Checkout session for upgrade
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planId]
+              properties:
+                planId:
+                  type: string
+                  enum: [pro, enterprise]
+                successUrl:
+                  type: string
+                cancelUrl:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+
+  /billing/usage:
+    get:
+      tags: [billing]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      summary: Get current billing period usage
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageReport'
+
+  /webhooks/stripe:
+    post:
+      tags: [webhooks]
+      summary: Stripe webhook handler
+      security:
+        - StripeWebhook: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+
+  /health:
+    get:
+      tags: [health]
+      summary: Health check endpoint
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded]
+                  version:
+                    type: string
+
+  /metrics:
+    get:
+      tags: [health]
+      summary: Prometheus metrics endpoint
+      responses:
+        '200':
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    StripeWebhook:
+      type: apiKey
+      in: header
+      name: Stripe-Signature
+
+  parameters:
+    tenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    sessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        tenant:
+          $ref: '#/components/schemas/Tenant'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatarUrl:
+          type: string
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        settings:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    Member:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+        joinedAt:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        tenantId:
+          type: string
+          format: uuid
+        createdBy:
+          $ref: '#/components/schemas/User'
+        model:
+          type: string
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+              name:
+                type: string
+              color:
+                type: string
+              cursor:
+                type: object
+        isPublic:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UsageReport:
+      type: object
+      properties:
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        apiCalls:
+          type: integer
+        storageMb:
+          type: number
+        sessionMinutes:
+          type: integer
+        activeUsers:
+          type: integer
+        limits:
+          type: object
+          properties:
+            apiCalls:
+              type: integer
+            storageMb:
+              type: number
+            sessionMinutes:
+              type: integer
+            activeUsers:
+              type: integer
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

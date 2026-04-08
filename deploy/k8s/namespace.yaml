@@ -1,0 +1,8 @@
+# PM4Wasm SaaS – Kubernetes Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pm4wasm
+  labels:
+    name: pm4wasm
+    project: pm4wasm-saas

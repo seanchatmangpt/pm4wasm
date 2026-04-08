@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Process Modeling Demo - POWL</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 { margin: 0; font-size: 2em; }
+    .header p { margin-top: 10px; opacity: 0.9; }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 30px;
+    }
+
+    .panel {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    #model-output {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 15px;
+      min-height: 200px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+
+    .status {
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+
+    .status.success { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.info { background: #d1ecf1; color: #0c5462; }
+
+    .feedback-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .export-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .example-prompts {
+      margin-top: 15px;
+    }
+
+    .example-btn {
+      padding: 8px 12px;
+      font-size: 13px;
+      background: #e3f2fd;
+      border: 1px solid #2196f3;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 2px;
+    }
+
+    .example-btn:hover {
+      background: #bbdefb;
+    }
+
+    .conversation-history {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .conversation-item {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+
+    .conversation-item.user {
+      border-left-color: #764ba2;
+    }
+
+    .conversation-item .role {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .conversation-item.user .role {
+      color: #764ba2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 LLM Process Modeling</h1>
+      <p>Generate process models from text descriptions using POWL</p>
+    </div>
+
+    <div class="main-content">
+      <div class="panel">
+        <h2>📝 Input</h2>
+        <p>Describe your business process:</p>
+        <textarea id="process-description" placeholder="E.g., A small company manufactures customized bicycles. The user starts an order by logging in, then simultaneously selects items and sets a payment method..."></textarea>
+
+        <div class="example-prompts">
+          <strong>Examples:</strong>
+          <button class="example-btn" onclick="loadExample('bicycle')">Bicycle Manufacturing</button>
+          <button class="example-btn" onclick="loadExample('hotel')">Hotel Service</button>
+          <button class="example-btn" onclick="loadExample('order')">Online Shop</button>
+        </div>
+
+        <div class="button-group">
+          <button class="btn-primary" onclick="generateModel()">✨ Generate Model</button>
+          <button class="btn-secondary" onclick="clearAll()">Clear</button>
+        </div>
+
+        <div class="feedback-section" style="display: none;" id="feedback-section">
+          <h3>💬 Feedback</h3>
+          <p>Provide feedback to refine the model:</p>
+          <textarea id="feedback-input" placeholder="E.g., Add a 'Prepare food' activity, or The guest may tip the waiter..."></textarea>
+          <div class="button-group">
+            <button class="btn-primary" onclick="refineModel()">🔄 Refine Model</button>
+          </div>
+        </div>
+
+        <div class="conversation-history" id="conversation-history" style="display: none;">
+          <h3>📜 Conversation History</h3>
+          <div id="conversation-items"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>🎨 Generated Model</h2>
+        <div id="status-message" style="display: none;"></div>
+        <div id="model-output">Model will appear here...</div>
+
+        <div id="export-section" style="display: none;">
+          <h3>📤 Export</h3>
+          <div class="export-buttons">
+            <button class="btn-secondary" onclick="exportBpmn()">BPMN 2.0</button>
+            <button class="btn-secondary" onclick="exportPetriNet()">Petri Net</button>
+            <button class="btn-secondary" onclick="exportJson()">JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the WASM module
+    import init, { Powl } from '../pkg/pm4wasm.js';
+
+    let currentModel = null;
+    let conversationHistory = [];
+    let powl = null;
+
+    // Example process descriptions from the paper
+    const EXAMPLES = {
+      bicycle: `A small company manufactures customized bicycles. The user starts an order by logging in to their account. Then, the user simultaneously selects the items to purchase and sets a payment method. Afterward, the user either pays or completes an installment agreement. After selecting the items, the user chooses between multiple options for a free reward. Finally, the items are delivered. The user has the right to return items for exchange.`,
+
+      hotel: `The Evanstonian is an upscale independent hotel. When a guest calls room service, the room-service manager takes down the order. She then submits an order ticket to the kitchen to begin preparing the food. She also gives an order to the sommelier to fetch wine from the cellar. Finally, she assigns the order to the waiter. While the kitchen and sommelier are doing their tasks, the waiter readies a cart. Once the food, wine, and cart are ready, the waiter delivers it to the guest's room. After returning to the room-service station, the waiter debits the guest's account.`,
+
+      order: `Consider a process for purchasing items from an online shop. The user starts an order by logging in to their account. Then, the user simultaneously selects the items to purchase and sets a payment method. Afterward, the user either pays or completes an installment agreement. After selecting the items, the user chooses between multiple options for a free reward. Finally, the items are delivered.`
+    };
+
+    // Initialize WASM
+    init().then(() => {
+      console.log('WASM initialized');
+      powl = new Powl();
+    }).catch(err => {
+      console.error('WASM initialization failed:', err);
+      showStatus('Failed to initialize WASM module', 'error');
+    });
+
+    // Load example
+    window.loadExample = function(name) {
+      document.getElementById('process-description').value = EXAMPLES[name];
+    };
+
+    // Generate model (simulated LLM call)
+    window.generateModel = async function() {
+      const description = document.getElementById('process-description').value;
+      if (!description.trim()) {
+        showStatus('Please enter a process description', 'error');
+        return;
+      }
+
+      showStatus('Generating model...', 'info');
+      addToConversation('user', description);
+
+      // Simulate LLM call (in real implementation, this would call an LLM API)
+      setTimeout(() => {
+        // For demo, generate a simple POWL model based on keywords
+        const mockModel = generateMockPowlModel(description);
+
+        document.getElementById('model-output').textContent = mockModel;
+        document.getElementById('export-section').style.display = 'block';
+        document.getElementById('feedback-section').style.display = 'block';
+        document.getElementById('conversation-history').style.display = 'block';
+
+        showStatus('Model generated successfully!', 'success');
+        currentModel = mockModel;
+        addToConversation('assistant', `Generated POWL model:\n${mockModel}`);
+      }, 1500);
+    };
+
+    // Refine model
+    window.refineModel = async function() {
+      const feedback = document.getElementById('feedback-input').value;
+      if (!feedback.trim()) {
+        showStatus('Please enter feedback', 'error');
+        return;
+      }
+
+      showStatus('Refining model...', 'info');
+      addToConversation('user', feedback);
+
+      // Simulate refinement
+      setTimeout(() => {
+        const refinedModel = refineMockModel(currentModel, feedback);
+        document.getElementById('model-output').textContent = refinedModel;
+        showStatus('Model refined successfully!', 'success');
+        currentModel = refinedModel;
+        addToConversation('assistant', `Refined POWL model:\n${refinedModel}`);
+        document.getElementById('feedback-input').value = '';
+      }, 1500);
+    };
+
+    // Export functions
+    window.exportBpmn = function() {
+      if (!currentModel) return;
+      showStatus('BPMN export: ' + currentModel, 'info');
+      // In real implementation, would use powl.toBpmn()
+    };
+
+    window.exportPetriNet = function() {
+      if (!currentModel) return;
+      showStatus('Petri net export: ' + currentModel, 'info');
+      // In real implementation, would use powl.toPetriNet()
+    };
+
+    window.exportJson = function() {
+      if (!currentModel) return;
+      const blob = new Blob([JSON.stringify({ model: currentModel, history: conversationHistory }, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'model.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showStatus('Model exported to JSON', 'success');
+    };
+
+    // Utility functions
+    window.clearAll = function() {
+      document.getElementById('process-description').value = '';
+      document.getElementById('feedback-input').value = '';
+      document.getElementById('model-output').textContent = 'Model will appear here...';
+      document.getElementById('export-section').style.display = 'none';
+      document.getElementById('feedback-section').style.display = 'none';
+      document.getElementById('conversation-history').style.display = 'none';
+      document.getElementById('status-message').style.display = 'none';
+      document.getElementById('conversation-items').innerHTML = '';
+      currentModel = null;
+      conversationHistory = [];
+    };
+
+    function showStatus(message, type) {
+      const status = document.getElementById('status-message');
+      status.textContent = message;
+      status.className = 'status ' + type;
+      status.style.display = 'block';
+    }
+
+    function addToConversation(role, content) {
+      conversationHistory.push({ role, content });
+      const container = document.getElementById('conversation-items');
+      const item = document.createElement('div');
+      item.className = 'conversation-item ' + role;
+      item.innerHTML = `
+        <div class="role">${role === 'user' ? '👤 User' : '🤖 Assistant'}</div>
+        <div class="content">${content}</div>
+      `;
+      container.appendChild(item);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Mock POWL model generator based on keywords
+    function generateMockPowlModel(description) {
+      const activities = extractActivities(description);
+      const structure = analyzeStructure(description);
+
+      if (structure.type === 'sequence') {
+        return `PO=(nodes={${activities.join(', ')}}, order={${activities.map((a, i) => i < activities.length - 1 ? `${a}-->${activities[i+1]}` : '').filter(Boolean).join(', ')}})`;
+      } else if (structure.type === 'parallel') {
+        return `X(${activities.join(', ')})`;
+      } else if (structure.type === 'choice') {
+        return `*(${activities.join(', ')})`;
+      } else {
+        // Complex nested structure
+        return `PO=(nodes={${activities[0]}, X(${activities.slice(1, -1).join(', ')}), ${activities[activities.length - 1]}}, order={${activities[0]}-->X(${activities.slice(1, -1).join(', ')}), X(${activities.slice(1, -1).join(', ')})-->${activities[activities.length - 1]}})`;
+      }
+    }
+
+    function extractActivities(text) {
+      // Simple keyword extraction for demo
+      const activityWords = ['login', 'select', 'pay', 'deliver', 'prepare', 'order', 'assign', 'ready', 'debit', 'return', 'choose', 'set'];
+      const activities = [];
+
+      const sentences = text.split(/[.!?]/);
+      sentences.forEach(sentence => {
+        activityWords.forEach(word => {
+          if (sentence.toLowerCase().includes(word) && !activities.includes(word.charAt(0).toUpperCase() + word.slice(1))) {
+            activities.push(word.charAt(0).toUpperCase() + word.slice(1));
+          }
+        });
+      });
+
+      return activities.length > 0 ? activities : ['A', 'B', 'C'];
+    }
+
+    function analyzeStructure(description) {
+      if (description.toLowerCase().includes('simultaneously') || description.toLowerCase().includes('parallel')) {
+        return { type: 'parallel' };
+      } else if (description.toLowerCase().includes('either') || description.toLowerCase().includes('or')) {
+        return { type: 'choice' };
+      } else if (description.toLowerCase().includes('then') || description.toLowerCase().includes('after')) {
+        return { type: 'sequence' };
+      }
+      return { type: 'complex' };
+    }
+
+    function refineMockModel(model, feedback) {
+      // Simple refinement simulation
+      const newActivity = feedback.split(/['']/)[1] || 'NewActivity';
+      if (model.includes('nodes={')) {
+        // Add new activity to existing model
+        const nodesMatch = model.match(/nodes={([^}]+)}/);
+        if (nodesMatch) {
+          const nodes = nodesMatch[1] + ', ' + newActivity;
+          return model.replace(/nodes={[^}]+}/, `nodes={${nodes}}`);
+        }
+      }
+      return model + '\n# Refined: ' + feedback;
+    }
+  </script>
+</body>
+</html>

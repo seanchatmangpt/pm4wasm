@@ -1,0 +1,234 @@
+# PM4Wasm SaaS – Helm Values (Production)
+
+# Global configuration
+global:
+  environment: production
+  domain: pm4py.org
+  # Image registry
+  imageRegistry: ghcr.io/pm4py
+  # Image pull secrets (for private registries)
+  imagePullSecrets: []
+
+# API configuration
+api:
+  enabled: true
+  replicaCount: 3
+
+  image:
+    repository: pm4wasm-api
+    tag: latest
+    pullPolicy: Always
+
+  # Resource limits and requests
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Autoscaling
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  # Environment variables
+  env:
+    NODE_ENV: production
+    PORT: "3000"
+    LOG_LEVEL: info
+    ENABLE_METRICS: "true"
+
+  # Ingress
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+    hosts:
+      - host: api.pm4py.org
+        paths:
+          - path: /v1
+            pathType: Prefix
+      - host: saas.pm4py.org
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: pm4wasm-tls
+        hosts:
+          - api.pm4py.org
+          - saas.pm4py.org
+
+# PostgreSQL configuration
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 16-alpine
+  # Storage
+  persistence:
+    enabled: true
+    storageClass: gp3-encrypted
+    size: 100Gi
+  # Resources
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  # Database settings
+  auth:
+    database: pm4wasm
+    username: pm4wasm
+    # Password from secret
+  # Backup
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention: 30  # Keep 30 backups
+
+# Redis configuration
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+  # Resources
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Redis settings
+  config:
+    maxmemory: 512mb
+    maxmemory-policy: allkeys-lru
+    appendonly: "yes"
+
+# Monitoring stack
+monitoring:
+  # Prometheus
+  prometheus:
+    enabled: true
+    retention: 30d
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+  # Grafana
+  grafana:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # Admin credentials from secret
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - grafana.pm4py.org
+      tls:
+        - secretName: grafana-tls
+          hosts:
+            - grafana.pm4py.org
+
+  # AlertManager
+  alertmanager:
+    enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    # Slack integration
+    slack:
+      webhookUrl: ""  # Set in production
+      channel: "#alerts"
+
+    # PagerDuty integration
+    pagerduty:
+      serviceKey: ""  # Set in production
+
+# Secrets configuration
+# Create with: helm install ... --set-file secrets.credentials=.env.prod
+secrets:
+  create: true
+  # Or reference existing secrets
+  existingSecret: ""
+
+# Service account
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: ""  # Set for AWS IAM roles for service accounts
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Network policies
+networkPolicy:
+  enabled: true
+  # Allow ingress from specific namespaces
+  ingressNamespaces:
+    - nginx-ingress
+  # Allow egress to specific namespaces
+  egressNamespaces:
+    - pm4wasm
+    - kube-system
+
+# Pod security
+podSecurity:
+  enabled: true
+  # Run as non-root
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Health checks
+healthCheck:
+  enabled: true
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Node affinity
+nodeAffinity:
+  enabled: true
+  labels:
+    node.kubernetes.io/instance-type: c5.xlarge
+
+# Pod anti-affinity
+podAntiAffinity:
+  enabled: true
+  type: preferredDuringSchedulingIgnoredDuringExecution
+  weight: 100

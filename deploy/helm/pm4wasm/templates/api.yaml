@@ -1,0 +1,236 @@
+# PM4Wasm SaaS – Helm Template (Main)
+{{- /*
+Copyright (C) 2026 Process Intelligence Solutions GmbH
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+*/ -}}
+
+{{- if .Values.api.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pm4wasm.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pm4wasm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pm4wasm.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "pm4wasm.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.api.env.PORT | default "3000" }}"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "pm4wasm.fullname" . }}-api
+      {{- with .Values.api.podSecurity }}
+      securityContext:
+        runAsNonRoot: {{ .runAsNonRoot | default true }}
+        runAsUser: {{ .runAsUser | default 1000 }}
+        fsGroup: {{ .fsGroup | default 1000 }}
+      {{- end }}
+      containers:
+      - name: api
+        image: "{{ .Values.global.imageRegistry }}/{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+        imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ int .Values.api.env.PORT | default 3000 }}
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: {{ .Values.api.env.NODE_ENV | default "production" }}
+        - name: PORT
+          value: {{ .Values.api.env.PORT | default "3000" | quote }}
+        - name: DATABASE_URL
+          value: "postgresql://{{ .Values.postgres.auth.username }}:$(POSTGRES_PASSWORD)@{{ include "pm4wasm.fullname" . }}-postgres:5432/{{ .Values.postgres.auth.database }}"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pm4wasm.secretName" . }}
+              key: POSTGRES_PASSWORD
+        - name: REDIS_URL
+          value: "redis://{{ include "pm4wasm.fullname" . }}-redis:6379"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pm4wasm.secretName" . }}
+              key: JWT_SECRET
+        {{- range $key, $value := .Values.api.env }}
+        {{- if not (eq $key "NODE_ENV" "PORT") }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.api.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.healthCheck }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: {{ .liveness.initialDelaySeconds }}
+          periodSeconds: {{ .liveness.periodSeconds }}
+          timeoutSeconds: {{ .liveness.timeoutSeconds }}
+          failureThreshold: {{ .liveness.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: {{ .readiness.initialDelaySeconds }}
+          periodSeconds: {{ .readiness.periodSeconds }}
+          timeoutSeconds: {{ .readiness.timeoutSeconds }}
+          failureThreshold: {{ .readiness.failureThreshold }}
+        {{- end }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      {{- with .Values.api.nodeAffinity }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              {{- range $key, $value := .labels }}
+              - key: {{ $key }}
+                operator: In
+                values:
+                - {{ $value }}
+              {{- end }}
+      {{- end }}
+
+---
+{{- if .Values.api.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "pm4wasm.fullname" . }}-api-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pm4wasm.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "pm4wasm.fullname" . }}-api
+  minReplicas: {{ .Values.api.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.api.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.api.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.api.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+{{- end }}
+
+---
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pm4wasm.fullname" . }}-api-pdb
+  namespace: {{ .Release.Namespace }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "pm4wasm.selectorLabels" . | nindent 6 }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pm4wasm.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pm4wasm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  selector:
+    {{- include "pm4wasm.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "pm4wasm.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pm4wasm.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+---
+{{- if .Values.api.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "pm4wasm.fullname" . }}-api-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pm4wasm.labels" . | nindent 4 }}
+  {{- with .Values.api.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.api.ingress.className }}
+  {{- with .Values.api.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.api.ingress.hosts }}
+  rules:
+    {{- range . }}
+    - host: {{ .host }}
+      http:
+        paths:
+        {{- range .paths }}
+        - path: {{ .path }}
+          pathType: {{ .pathType }}
+          backend:
+            service:
+              name: {{ include "pm4wasm.fullname" . }}-api
+              port:
+                number: 80
+        {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- end }}

@@ -1,0 +1,80 @@
+{
+  "name": "pm4wasm",
+  "version": "26.4.7",
+  "description": "Process mining in Rust/WebAssembly — WASM port of pm4py with LLM integration",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "pkg/pm4wasm_bg.wasm",
+    "pkg/pm4wasm_bg.js",
+    "pkg/pm4wasm.js",
+    "pkg/pm4wasm.d.ts",
+    "pkg/pm4wasm_bg.wasm.d.ts",
+    "pkg/pm4wasm.js.d.ts",
+    "pkg/LICENSE",
+    "pkg/README.md"
+  ],
+  "scripts": {
+    "build:wasm": "wasm-pack build .. --target bundler --out-dir js/pkg --out-name pm4wasm",
+    "build:ts": "tsc && vite build",
+    "build": "npm run build:wasm && npm run build:ts",
+    "dev": "npm run build:wasm && vite",
+    "demo": "npm run build:wasm && vite --config vite.demo.config.ts",
+    "test": "npm run test:ts && npm run test:wasm",
+    "test:ts": "vitest run",
+    "test:wasm": "wasm-pack test .. --headless --firefox",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@vitest/ui": "^4.1.2",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0",
+    "vite-plugin-top-level-await": "^1.4.4",
+    "vite-plugin-wasm": "^3.3.0",
+    "vitest": "^4.1.2"
+  },
+  "keywords": [
+    "process-mining",
+    "pm4py",
+    "powl",
+    "wasm",
+    "webassembly",
+    "petri-net",
+    "conformance-checking",
+    "process-mining-wasm",
+    "browser-process-mining",
+    "llm",
+    "vercel-ai-sdk",
+    "natural-language",
+    "bpmn",
+    "workflow",
+    "process-discovery"
+  ],
+  "homepage": "https://github.com/seanchatmangpt/pm4wasm#readme",
+  "bugs": {
+    "url": "https://github.com/seanchatmangpt/pm4wasm/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seanchatmangpt/pm4wasm",
+    "directory": "js"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.0-beta.21",
+    "@ai-sdk/groq": "^4.0.0-beta.18",
+    "@ai-sdk/openai": "^4.0.0-beta.25",
+    "ai": "^7.0.0-beta.72",
+    "micro-ml": "^1.0.0"
+  }
+}

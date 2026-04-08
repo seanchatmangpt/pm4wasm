@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POWL v2 — Browser Demo</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: system-ui, sans-serif;
+        background: #0f1117;
+        color: #e2e8f0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      header {
+        padding: 1rem 2rem;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: #0d1117;
+      }
+
+      header h1 { font-size: 1.25rem; font-weight: 600; }
+      header span { font-size: 0.8rem; color: #64748b; background: #1e293b; padding: 0.2rem 0.5rem; border-radius: 4px; }
+
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 1px;
+        background: #1e293b;
+        height: calc(100vh - 57px);
+      }
+
+      .panel {
+        background: #0f1117;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 0.6rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
+
+      .badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        font-weight: 500;
+      }
+      .badge-green  { background: #14532d; color: #4ade80; }
+      .badge-red    { background: #7f1d1d; color: #f87171; }
+      .badge-blue   { background: #1e3a5f; color: #60a5fa; }
+      .badge-yellow { background: #713f12; color: #fbbf24; }
+
+      textarea {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        resize: none;
+        padding: 1rem;
+        color: #e2e8f0;
+        font-family: "Fira Code", "Cascadia Code", monospace;
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+
+      pre {
+        flex: 1;
+        overflow: auto;
+        padding: 1rem;
+        font-family: "Fira Code", "Cascadia Code", monospace;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .tree-view {
+        flex: 1;
+        overflow: auto;
+        padding: 1rem;
+      }
+
+      .tree-node {
+        margin: 0.15rem 0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-family: monospace;
+        cursor: default;
+        border-left: 2px solid transparent;
+      }
+      .tree-node:hover { background: #1e293b; }
+      .tree-node[data-type="Transition"]          { border-color: #60a5fa; }
+      .tree-node[data-type="StrictPartialOrder"]  { border-color: #a78bfa; }
+      .tree-node[data-type="OperatorPowl"]        { border-color: #34d399; }
+      .tree-node[data-type="FrequentTransition"]  { border-color: #fbbf24; }
+
+      .tree-children { padding-left: 1.25rem; }
+
+      .conformance-grid {
+        flex: 1;
+        overflow: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .fitness-bar-wrap {
+        background: #1e293b;
+        border-radius: 6px;
+        height: 6px;
+        overflow: hidden;
+      }
+      .fitness-bar {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.3s ease;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #94a3b8;
+      }
+      .stat-row span:last-child { color: #e2e8f0; font-weight: 600; }
+
+      .trace-list {
+        flex: 1;
+        overflow-y: auto;
+      }
+      .trace-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid #1e293b;
+        font-size: 0.78rem;
+        gap: 0.5rem;
+      }
+      .trace-id { color: #64748b; font-family: monospace; flex-shrink: 0; }
+      .trace-activities { color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .trace-fit { font-weight: 600; flex-shrink: 0; }
+
+      .drop-zone {
+        border: 2px dashed #1e293b;
+        border-radius: 8px;
+        padding: 0.75rem;
+        text-align: center;
+        font-size: 0.78rem;
+        color: #475569;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        flex-shrink: 0;
+        margin: 0.5rem;
+      }
+      .drop-zone.drag-over { border-color: #3b82f6; background: #1e3a5f20; color: #60a5fa; }
+      .drop-zone input { display: none; }
+
+      #status {
+        font-size: 0.72rem;
+        color: #64748b;
+      }
+
+      .examples {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        padding: 0.4rem 1rem;
+        border-top: 1px solid #1e293b;
+        flex-shrink: 0;
+      }
+
+      .example-btn {
+        font-size: 0.68rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        border: 1px solid #334155;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        font-family: monospace;
+        transition: background 0.15s;
+      }
+      .example-btn:hover { background: #1e293b; color: #e2e8f0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>POWL v2</h1>
+      <span>Rust / WASM</span>
+      <span id="status">Loading…</span>
+    </header>
+
+    <main>
+      <!-- Panel 1: Model editor -->
+      <div class="panel">
+        <div class="panel-header">
+          Model Input
+          <span id="valid-badge" class="badge badge-blue">—</span>
+        </div>
+        <textarea id="model-input" spellcheck="false"
+          placeholder="Type a POWL model…">PO=(nodes={A, X(B, C), D}, order={A-->X(B,C), X(B,C)-->D})</textarea>
+        <div class="examples">
+          <button class="example-btn" data-model="A">A</button>
+          <button class="example-btn" data-model="X(A, B)">X(A,B)</button>
+          <button class="example-btn" data-model="*(A, B)">*(A,B)</button>
+          <button class="example-btn" data-model="PO=(nodes={A, B, C}, order={A-->B, A-->C})">PO A→B,C</button>
+          <button class="example-btn" data-model="PO=(nodes={A, X(B, C), D}, order={A-->X(B,C), X(B,C)-->D})">Nested</button>
+          <button class="example-btn" data-model="PO=(nodes={A, B, C, D}, order={A-->C, A-->D, B-->C, B-->D})">Diamond</button>
+        </div>
+      </div>
+
+      <!-- Panel 2: Tree view -->
+      <div class="panel">
+        <div class="panel-header">Node Tree</div>
+        <div class="tree-view" id="tree-view"></div>
+      </div>
+
+      <!-- Panel 3: Conformance / event log -->
+      <div class="panel">
+        <div class="panel-header">
+          Conformance Checking
+          <span id="fitness-badge" class="badge badge-blue">—</span>
+        </div>
+        <div class="conformance-grid" id="conformance-grid">
+          <div style="color:#475569;font-size:0.8rem;">Drop an XES or CSV event log to check conformance.</div>
+        </div>
+        <label class="drop-zone" id="drop-zone">
+          Drop XES / CSV log here or click to browse
+          <input type="file" id="file-input" accept=".xes,.csv,.xml" />
+        </label>
+      </div>
+
+      <!-- Panel 4: JSON / Petri net output -->
+      <div class="panel">
+        <div class="panel-header">
+          Petri Net (JSON)
+          <span id="pn-badge" class="badge badge-blue">—</span>
+        </div>
+        <pre id="pn-output">—</pre>
+      </div>
+    </main>
+
+    <script type="module">
+      import { Powl } from "./main.ts";
+
+      // ── State ────────────────────────────────────────────────────────────────
+
+      let powl = null;
+      let currentModel = null;
+      let currentLog = null;
+
+      // ── Init ─────────────────────────────────────────────────────────────────
+
+      Powl.init().then((p) => {
+        powl = p;
+        document.getElementById("status").textContent = "Ready";
+        refreshModel();
+      }).catch((e) => {
+        document.getElementById("status").textContent = "Error: " + e.message;
+      });
+
+      // ── Model input ───────────────────────────────────────────────────────────
+
+      const modelInput = document.getElementById("model-input");
+      modelInput.addEventListener("input", () => refreshModel());
+
+      document.querySelectorAll(".example-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          modelInput.value = btn.dataset.model;
+          refreshModel();
+        });
+      });
+
+      function refreshModel() {
+        if (!powl) return;
+        const src = modelInput.value.trim();
+        if (!src) return;
+
+        try {
+          currentModel = powl.parse(src);
+          currentModel.validate();
+
+          setValidBadge(true);
+          renderTree(currentModel);
+          renderPetriNet(currentModel);
+          if (currentLog) renderConformance(currentModel, currentLog);
+
+        } catch (err) {
+          setValidBadge(false, err.message);
+          clearTree();
+          document.getElementById("pn-output").textContent = err.message;
+          document.getElementById("pn-badge").className = "badge badge-red";
+          document.getElementById("pn-badge").textContent = "Error";
+        }
+      }
+
+      // ── Validation badge ──────────────────────────────────────────────────────
+
+      function setValidBadge(ok, msg) {
+        const b = document.getElementById("valid-badge");
+        if (ok) {
+          b.className = "badge badge-green";
+          b.textContent = "Valid";
+        } else {
+          b.className = "badge badge-red";
+          b.textContent = "Invalid";
+          b.title = msg || "";
+        }
+      }
+
+      // ── Tree view ─────────────────────────────────────────────────────────────
+
+      function renderTree(model) {
+        const container = document.getElementById("tree-view");
+
+        function buildNode(idx) {
+          const info = model.nodeInfo(idx);
+          const div = document.createElement("div");
+          div.className = "tree-node";
+          div.dataset.type = info.type;
+          div.dataset.idx = idx;
+
+          let label;
+          if (info.type === "Transition") {
+            label = info.label === "tau" ? "τ (tau)" : `Transition: ${info.label}`;
+          } else if (info.type === "FrequentTransition") {
+            label = `FreqTrans: ${info.activity}${info.skippable ? " [skip]" : ""}${info.selfloop ? " [loop]" : ""}`;
+          } else if (info.type === "StrictPartialOrder") {
+            label = `SPO [${info.children.length} children, ${info.edges.length} edges]`;
+          } else if (info.type === "OperatorPowl") {
+            label = `${info.operator} [${info.children.length} children]`;
+          } else {
+            label = "Unknown";
+          }
+
+          div.textContent = `[${idx}] ${label}`;
+
+          const children = model.children(idx);
+          if (children.length > 0) {
+            const childDiv = document.createElement("div");
+            childDiv.className = "tree-children";
+            for (const child of children) {
+              childDiv.appendChild(buildNode(child));
+            }
+            const wrapper = document.createElement("div");
+            wrapper.appendChild(div);
+            wrapper.appendChild(childDiv);
+            return wrapper;
+          }
+
+          return div;
+        }
+
+        container.innerHTML = "";
+        container.appendChild(buildNode(model.root));
+      }
+
+      function clearTree() {
+        document.getElementById("tree-view").innerHTML = "";
+      }
+
+      // ── Petri net ─────────────────────────────────────────────────────────────
+
+      function renderPetriNet(model) {
+        try {
+          const pn = model.toPetriNet();
+          const badge = document.getElementById("pn-badge");
+          badge.className = "badge badge-green";
+          badge.textContent = `${pn.net.places.length}P / ${pn.net.transitions.length}T / ${pn.net.arcs.length}A`;
+          document.getElementById("pn-output").textContent =
+            JSON.stringify(pn, null, 2);
+        } catch (e) {
+          document.getElementById("pn-badge").className = "badge badge-red";
+          document.getElementById("pn-badge").textContent = "Error";
+          document.getElementById("pn-output").textContent = e.message;
+        }
+      }
+
+      // ── Conformance ───────────────────────────────────────────────────────────
+
+      function renderConformance(model, log) {
+        const result = powl.conformance(model, log);
+        const pct = (result.percentage * 100).toFixed(1);
+        const badge = document.getElementById("fitness-badge");
+        badge.textContent = `${pct}%`;
+        badge.className = `badge ${result.percentage >= 0.8 ? "badge-green" : result.percentage >= 0.5 ? "badge-yellow" : "badge-red"}`;
+
+        const grid = document.getElementById("conformance-grid");
+        grid.innerHTML = "";
+
+        // Summary stats
+        const stats = document.createElement("div");
+        stats.style.display = "flex";
+        stats.style.flexDirection = "column";
+        stats.style.gap = "0.5rem";
+
+        const barColor = result.percentage >= 0.8 ? "#4ade80" : result.percentage >= 0.5 ? "#fbbf24" : "#f87171";
+        stats.innerHTML = `
+          <div class="fitness-bar-wrap">
+            <div class="fitness-bar" style="width:${pct}%;background:${barColor}"></div>
+          </div>
+          <div class="stat-row"><span>Global fitness</span><span>${pct}%</span></div>
+          <div class="stat-row"><span>Avg trace fitness</span><span>${(result.avg_trace_fitness * 100).toFixed(1)}%</span></div>
+          <div class="stat-row"><span>Perfect traces</span><span>${result.perfectly_fitting_traces} / ${result.total_traces}</span></div>
+        `;
+        grid.appendChild(stats);
+
+        // Separator
+        const sep = document.createElement("div");
+        sep.style.borderTop = "1px solid #1e293b";
+        sep.style.paddingTop = "0.5rem";
+        sep.style.fontSize = "0.72rem";
+        sep.style.color = "#64748b";
+        sep.textContent = "Traces";
+        grid.appendChild(sep);
+
+        // Trace list
+        const list = document.createElement("div");
+        list.className = "trace-list";
+        for (const r of result.trace_results) {
+          const item = document.createElement("div");
+          item.className = "trace-item";
+          const trace = log.traces.find((t) => t.case_id === r.case_id);
+          const activities = trace ? trace.events.map((e) => e.name).join(" → ") : "";
+          const fitPct = (r.fitness * 100).toFixed(0);
+          const fitColor = r.fitness >= 0.8 ? "#4ade80" : r.fitness >= 0.5 ? "#fbbf24" : "#f87171";
+          item.innerHTML = `
+            <span class="trace-id">${r.case_id}</span>
+            <span class="trace-activities" title="${activities}">${activities}</span>
+            <span class="trace-fit" style="color:${fitColor}">${fitPct}%</span>
+          `;
+          list.appendChild(item);
+        }
+        grid.appendChild(list);
+      }
+
+      // ── File drop ─────────────────────────────────────────────────────────────
+
+      const dropZone = document.getElementById("drop-zone");
+      const fileInput = document.getElementById("file-input");
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+      });
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files[0]) handleFile(fileInput.files[0]);
+      });
+
+      async function handleFile(file) {
+        if (!powl) return;
+        const fitBadge = document.getElementById("fitness-badge");
+        fitBadge.className = "badge badge-blue";
+        fitBadge.textContent = "Parsing…";
+        try {
+          if (file.name.endsWith(".csv")) {
+            currentLog = await powl.readCsvFile(file);
+          } else {
+            currentLog = await powl.readXesFile(file);
+          }
+          dropZone.querySelector("div,span,label") ;
+          dropZone.childNodes.forEach((n) => { if (n.nodeType === 3) n.textContent = ""; });
+          dropZone.title = `${file.name} — ${currentLog.traces.length} traces`;
+          dropZone.querySelector("input").insertAdjacentText(
+            "beforebegin",
+            `${file.name} (${currentLog.traces.length} traces)`,
+          );
+          if (currentModel) renderConformance(currentModel, currentLog);
+        } catch (e) {
+          fitBadge.className = "badge badge-red";
+          fitBadge.textContent = "Parse error";
+          document.getElementById("conformance-grid").textContent = e.message;
+        }
+      }
+    </script>
+  </body>
+</html>

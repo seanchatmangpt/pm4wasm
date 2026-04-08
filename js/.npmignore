@@ -1,0 +1,59 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Tests
+*.test.ts
+*.test.ts.map
+vitest.config.ts
+
+# Build configs
+vite.config.ts
+vite.demo.config.ts
+tsconfig.json
+
+# Example files
+*.example.ts
+demo/
+
+# Development files
+.node-version
+.npmrc
+.prettierignore
+.prettierrc*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Documentation (keep README)
+docs/
+*.md
+!README.md
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Misc
+.npmrc
+.eslintrc*

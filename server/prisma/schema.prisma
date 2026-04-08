@@ -1,0 +1,266 @@
+// Prisma schema for pm4wasm SaaS platform
+// Multi-tenant architecture with row-level security
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// Users & Authentication
+// =============================================================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String?  // Null for OAuth-only users
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // OAuth providers
+  oauthProviders OAuthProvider[]
+
+  // Memberships in tenants
+  memberships TenantMember[]
+
+  // Created sessions
+  createdSessions Session[]
+
+  @@index([email])
+}
+
+model OAuthProvider {
+  id         String   @id @default(uuid())
+  userId     String
+  provider   String   // "google", "github", etc.
+  providerId String   // Provider's user ID
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+// =============================================================================
+// Multi-Tenancy
+// =============================================================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique  // URL-friendly identifier
+  plan      Plan     @default(FREE)
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Stripe billing
+  stripeCustomerId    String?
+  stripeSubscriptionId String?
+  subscriptionStatus  String?
+
+  // Members
+  members TenantMember[]
+
+  // Sessions
+  sessions Session[]
+
+  // Usage tracking
+  usageRecords UsageRecord[]
+
+  @@index([slug])
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model TenantMember {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  roleId    String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role?  @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+// =============================================================================
+// Enterprise Features: RBAC
+// =============================================================================
+
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String?  // Null for system-wide roles
+  name        String
+  description String?
+  permissions Json     // Array of {resource, action, scope}
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members TenantMember[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// =============================================================================
+// Enterprise Features: Audit Logs
+// =============================================================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  eventType   String   // AuditEventType enum
+  userId      String?
+  tenantId    String?
+  actorId     String?
+  actorEmail  String?
+  actorName   String?
+  resourceType String?
+  resourceId   String?
+  resourceName String?
+  action      String
+  metadata    Json     // AuditEventMetadata
+  severity    String   @default("info") // "info", "warning", "error", "critical"
+  timestamp   DateTime @default(now())
+  expiresAt   DateTime // For retention policy
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@index([resourceType, resourceId])
+}
+
+// =============================================================================
+// Enterprise Features: SSO
+// =============================================================================
+
+model SSOConfig {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  provider    String   // SSOProvider enum
+  protocol    String   // SSOProtocol enum
+  enabled     Boolean  @default(false)
+  config      Json     // SSO configuration details
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([provider])
+}
+
+// =============================================================================
+// Collaborative Sessions
+// =============================================================================
+
+model Session {
+  id          String    @id @default(uuid())
+  tenantId    String
+  name        String
+  model       String    // POWL model string
+  isPublic    Boolean   @default(false)
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+
+  // Session history for replay
+  history SessionHistory[]
+
+  @@index([tenantId])
+  @@index([createdBy])
+  @@index([isPublic])
+}
+
+model SessionHistory {
+  id          String    @id @default(uuid())
+  sessionId   String
+  userId      String?
+  action      String    // "update_model", "cursor_move", "join", "leave"
+  data        Json      // Action-specific data
+  timestamp   DateTime  @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([timestamp])
+}
+
+// =============================================================================
+// Usage & Billing
+// =============================================================================
+
+model UsageRecord {
+  id          String   @id @default(uuid())
+  tenantId    String
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Counters
+  apiCalls        Int     @default(0)
+  storageMb       Float   @default(0)
+  sessionMinutes  Int     @default(0)
+  activeUsers     Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, periodStart])
+  @@index([tenantId])
+}
+
+// =============================================================================
+// Invitations
+// =============================================================================
+
+model Invitation {
+  id        String   @id @default(uuid())
+  tenantId  String
+  email     String
+  role      Role
+  token     String   @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([token])
+}

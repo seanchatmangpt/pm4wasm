@@ -1,0 +1,131 @@
+# PM4Wasm SaaS – Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: pm4wasm
+  labels:
+    app: redis
+    tier: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        tier: cache
+    spec:
+      securityContext:
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        - --maxmemory
+        - "512mb"
+        - --maxmemory-policy
+        - allkeys-lru
+        ports:
+        - name: redis
+          containerPort: 6379
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: redis-data
+        emptyDir: {}
+
+---
+# Service for Redis
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: pm4wasm
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: redis
+    protocol: TCP
+  selector:
+    app: redis
+
+---
+# Redis Exporter for Prometheus
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-exporter
+  namespace: pm4wasm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-exporter
+  template:
+    metadata:
+      labels:
+        app: redis-exporter
+    spec:
+      containers:
+      - name: exporter
+        image: oliver006/redis_exporter:latest
+        args:
+        - --redis.addr=redis://redis:6379
+        ports:
+        - name: metrics
+          containerPort: 9121
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+---
+# Service for Redis Exporter
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-exporter
+  namespace: pm4wasm
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9121
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: redis-exporter

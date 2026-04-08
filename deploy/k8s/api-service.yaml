@@ -1,0 +1,93 @@
+# PM4Wasm SaaS – API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pm4wasm-api
+  namespace: pm4wasm
+  labels:
+    app: pm4wasm-api
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: pm4wasm-api
+
+---
+# ServiceAccount for API
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pm4wasm-api
+  namespace: pm4wasm
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/pm4wasm-api-role
+
+---
+# Ingress for API
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pm4wasm-api-ingress
+  namespace: pm4wasm
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/websocket-services: "pm4wasm-api"
+spec:
+  tls:
+  - hosts:
+    - api.pm4py.org
+    - saas.pm4py.org
+    secretName: pm4wasm-tls
+  rules:
+  - host: api.pm4py.org
+    http:
+      paths:
+      - path: /v1
+        pathType: Prefix
+        backend:
+          service:
+            name: pm4wasm-api
+            port:
+              number: 80
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: pm4wasm-api
+            port:
+              number: 80
+      - path: /metrics
+        pathType: Prefix
+        backend:
+          service:
+            name: pm4wasm-api
+            port:
+              number: 80
+  - host: saas.pm4py.org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pm4wasm-api
+            port:
+              number: 80
