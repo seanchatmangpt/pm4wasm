@@ -14,5 +14,7 @@ export default defineConfig({
     rollupOptions: {
       // wasm module is inlined by vite-plugin-wasm — nothing external
     },
+    outDir: "dist/esm",
+    emptyOutDir: false, // preserve tsc declarations in dist/
   },
 });

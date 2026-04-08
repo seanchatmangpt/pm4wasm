@@ -196,7 +196,7 @@ pub struct OCELSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ocel::{parse_ocel_json, OCELEvent, OCELObject, OCELRelation};
+    use crate::ocel::parse_ocel_json;
 
     fn make_test_ocel() -> OCEL {
         let json = r#"{

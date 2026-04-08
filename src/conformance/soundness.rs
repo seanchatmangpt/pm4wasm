@@ -376,6 +376,7 @@ mod tests {
         (net, initial, final_m)
     }
 
+    #[allow(dead_code)]
     fn unbounded_net() -> (PetriNet, Marking, Marking) {
         // Self-loop with no sink (unbounded)
         let mut net = PetriNet::new("unbounded");

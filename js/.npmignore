@@ -1,21 +1,24 @@
 # Source files
 src/
-*.ts
-!*.d.ts
 
-# Tests
-*.test.ts
-*.test.ts.map
+# Tests and examples
+*.test.*
+*-example.*
+demo/
 vitest.config.ts
+coverage/
 
 # Build configs
 vite.config.ts
 vite.demo.config.ts
 tsconfig.json
 
-# Example files
-*.example.ts
-demo/
+# Source maps
+*.map
+
+# Raw tsc JS output (we ship the vite bundle in dist/esm/)
+dist/*.js
+!dist/esm/*.js
 
 # Development files
 .node-version
@@ -51,9 +54,5 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Test coverage
-coverage/
-
 # Misc
-.npmrc
 .eslintrc*
