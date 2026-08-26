@@ -1,0 +1,15 @@
+# pm4wasm GGEN Capability Reference
+
+Generated from `ontology/ggen-powl-capabilities.ttl`.
+
+{% for row in rows %}
+## {{ row.label }}
+
+- **Artifact:** {{ row.artifact }}
+- **Runtime:** {{ row.runtime }}
+- **Authority:** {{ row.authority }}
+- **Meaning:** {{ row.description }}
+
+{% endfor %}
+
+This document is a generated projection; edit the ontology or template, not generated output.
