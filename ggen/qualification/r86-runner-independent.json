@@ -1,0 +1,13 @@
+{
+  "schema": "https://ggen.dev/schema/forced-top25-qualification-capsule/v1",
+  "consumer_repo": "seanchatmangpt/pm4wasm",
+  "consumer_subject": "7f32a77fa5e84f2038b3c18beca570ad90b58566",
+  "producer_repo": "seanchatmangpt/ggen-marketplace",
+  "producer_head": "260e59b8f04896795d13ecada328f451b7570161",
+  "producer_pack": "forced-top25-qualification-capsule-pack",
+  "qualification_command": "ggen sync --manifest ggen.toml && test -s docs/reference/ggen-powl-capabilities.md",
+  "authority": "VERIFY|CONSTRUCT",
+  "consequential_do": false,
+  "hosted_wrapper_standing": "BUILD_BROKEN[HOSTED_ACTIONS_STARTUP_FAILURE]",
+  "hosted_wrapper_required_for_semantic_standing": false
+}
