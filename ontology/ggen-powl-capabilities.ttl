@@ -1,0 +1,30 @@
+@prefix pm: <https://pm4wasm.dev/ontology/ggen#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+pm:powl-v2 a skos:Concept ;
+  skos:prefLabel "POWL v2 WebAssembly library" ;
+  dcterms:description "Partially Ordered Workflow Language v2 compiled to WebAssembly and Rust library targets." ;
+  pm:artifact "cdylib|rlib" ;
+  pm:runtime "wasm-bindgen" ;
+  pm:authority "CONSTRUCT_ONLY" ;
+  prov:wasDerivedFrom <https://github.com/seanchatmangpt/pm4wasm/blob/ddf402ee9856589187b85dd876cdf37e7ffd2c92/Cargo.toml> .
+
+pm:xml-event-ingestion a skos:Concept ;
+  skos:prefLabel "XML event ingestion" ;
+  dcterms:description "Process-event XML ingestion capability backed by quick-xml." ;
+  pm:artifact "Rust" ;
+  pm:runtime "quick-xml" ;
+  pm:authority "CONSTRUCT_ONLY" .
+
+pm:wasm-js-boundary a skos:Concept ;
+  skos:prefLabel "WASM JavaScript boundary" ;
+  dcterms:description "Typed Rust/JavaScript serialization boundary through wasm-bindgen and serde-wasm-bindgen." ;
+  pm:artifact "WebAssembly" ;
+  pm:runtime "wasm-bindgen" ;
+  pm:authority "CONSTRUCT_ONLY" .
+
+pm:artifact a <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> .
+pm:runtime a <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> .
+pm:authority a <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> .
