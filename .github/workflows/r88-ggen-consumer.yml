@@ -1,0 +1,50 @@
+name: R88 GGEN pm4wasm Consumer
+
+on:
+  pull_request:
+    paths:
+      - "ggen.toml"
+      - "ontology/ggen-powl-capabilities.ttl"
+      - "templates/ggen-powl-capabilities.md.tera"
+      - ".github/workflows/r88-ggen-consumer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manufacture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact consumer subject
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Admit exact consumer subject
+        run: |
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          printf 'consumer=%s\n' "${GITHUB_SHA}"
+          printf 'producer=%s\n' "ddfa602bfbab57b7ed5150f61b0acac7a41e3020"
+
+      - name: Resolve exact GGEN producer
+        run: |
+          git clone --filter=blob:none https://github.com/seanchatmangpt/ggen.git "$RUNNER_TEMP/ggen"
+          git -C "$RUNNER_TEMP/ggen" checkout --detach ddfa602bfbab57b7ed5150f61b0acac7a41e3020
+          test "$(git -C "$RUNNER_TEMP/ggen" rev-parse HEAD)" = "ddfa602bfbab57b7ed5150f61b0acac7a41e3020"
+
+      - name: Manufacture through canonical GGEN
+        run: cargo run --manifest-path "$RUNNER_TEMP/ggen/Cargo.toml" -p ggen-cli-lib --bin ggen -- sync run
+
+      - name: Qualify generated consequence and receipt
+        run: |
+          test -s docs/reference/ggen-powl-capabilities.md
+          grep -q 'POWL v2 WebAssembly library' docs/reference/ggen-powl-capabilities.md
+          grep -q 'WASM JavaScript boundary' docs/reference/ggen-powl-capabilities.md
+          test -s .ggen-v2/receipt.json
+
+      - name: Preserve construct-only authority
+        run: |
+          grep -q 'CONSTRUCT_ONLY' ontology/ggen-powl-capabilities.ttl
+          ! grep -R --line-number -E '(kubectl|terraform apply|cargo publish|npm publish)' ggen.toml ontology/ggen-powl-capabilities.ttl templates/ggen-powl-capabilities.md.tera
