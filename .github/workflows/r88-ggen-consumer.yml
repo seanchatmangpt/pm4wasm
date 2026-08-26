@@ -1,6 +1,9 @@
 name: R88 GGEN pm4wasm Consumer
 
 on:
+  push:
+    branches:
+      - "fanout/r88-ggen-powl-reference"
   pull_request:
     paths:
       - "ggen.toml"
