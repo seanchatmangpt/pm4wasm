@@ -1,0 +1,8 @@
+{
+  "schema": "ggen.orthogonal-consumer-capital/1",
+  "authority": "SELECT|CONSTRUCT|VERIFY",
+  "consequential_do": false,
+  "targets": [
+  {"repository":"seanchatmangpt/pm4wasm","expected_yield":1001,"dependency_unlocks":2001,"composition_unlocks":3001,"future_capacity":4001}
+  ]
+}
