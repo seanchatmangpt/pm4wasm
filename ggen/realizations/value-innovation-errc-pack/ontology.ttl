@@ -1,0 +1,4 @@
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix ws4: <urn:ws4:ontology:> .
+<urn:ws4:pm4wasm:value-innovation-errc-pack> a prov:Plan ; dcterms:identifier "seanchatmangpt/pm4wasm#value-innovation-errc-pack" ; ws4:consumer "seanchatmangpt/pm4wasm" ; ws4:exactBase "21f0174994bff401904c7ea58a0099474768a0da" ; ws4:selectedPack "value-innovation-errc-pack" ; ws4:ggenRelease "v26.8.27" ; ws4:marketplaceSha "9b2a278a16633336ded6c14bfbb2185763753319" .

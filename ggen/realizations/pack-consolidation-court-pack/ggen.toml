@@ -1,0 +1,9 @@
+[project]
+name = "pm4wasm-pack-consolidation-court-pack"
+[ontology]
+source = "ontology.ttl"
+[packs]
+"pack-consolidation-court-pack" = { path = "../../../.ggen-bootstrap/marketplace/packs/pack-consolidation-court-pack-26.8.26/pack-consolidation-court-pack" }
+[templates]
+dir = "consumer-templates"
+aggregate_modules = false

@@ -1,0 +1,9 @@
+[project]
+name = "pm4wasm-fastmcp-pack"
+[ontology]
+source = "ontology.ttl"
+[packs]
+"fastmcp-pack" = { path = "../../../.ggen-bootstrap/marketplace/packs/fastmcp-pack-0.1.0/fastmcp-pack" }
+[templates]
+dir = "consumer-templates"
+aggregate_modules = false

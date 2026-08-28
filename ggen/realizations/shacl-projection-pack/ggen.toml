@@ -1,0 +1,9 @@
+[project]
+name = "pm4wasm-shacl-projection-pack"
+[ontology]
+source = "ontology.ttl"
+[packs]
+"shacl-projection-pack" = { path = "../../../.ggen-bootstrap/marketplace/packs/shacl-projection-pack-0.1.0/shacl-projection-pack" }
+[templates]
+dir = "consumer-templates"
+aggregate_modules = false

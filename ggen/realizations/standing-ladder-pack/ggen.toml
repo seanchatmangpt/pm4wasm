@@ -1,0 +1,9 @@
+[project]
+name = "pm4wasm-standing-ladder-pack"
+[ontology]
+source = "ontology.ttl"
+[packs]
+"standing-ladder-pack" = { path = "../../../.ggen-bootstrap/marketplace/packs/standing-ladder-pack-0.1.1/standing-ladder-pack" }
+[templates]
+dir = "consumer-templates"
+aggregate_modules = false

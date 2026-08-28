@@ -1,0 +1,9 @@
+[project]
+name = "pm4wasm-self-monitoring-pack"
+[ontology]
+source = "ontology.ttl"
+[packs]
+"self-monitoring-pack" = { path = "../../../.ggen-bootstrap/marketplace/packs/self-monitoring-pack-26.7.13/self-monitoring-pack" }
+[templates]
+dir = "consumer-templates"
+aggregate_modules = false
