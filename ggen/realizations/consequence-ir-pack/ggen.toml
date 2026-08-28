@@ -1,0 +1,9 @@
+[project]
+name = "pm4wasm-consequence-ir-pack"
+[ontology]
+source = "ontology.ttl"
+[packs]
+"consequence-ir-pack" = { path = "../../../.ggen-bootstrap/marketplace/packs/consequence-ir-pack-0.2.0/consequence-ir-pack" }
+[templates]
+dir = "consumer-templates"
+aggregate_modules = false
