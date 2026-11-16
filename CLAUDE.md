@@ -1,6 +1,9 @@
-# CLAUDE.md
+# pm4wasm — Claude Code Configuration
 
 pm4wasm is a Rust/WebAssembly process mining library (v26.4.8, Apache-2.0) — WASM port of pm4py with browser-native LLM integration. ~25,300 lines of Rust, 117 wasm_bindgen exports.
+
+**REQUIRED READING:**
+- **Root instructions**: See `../CLAUDE.md` (Constitutional Law, Evidence Standards, Git Safety, Dependencies)
 
 ## Setup
 
@@ -163,6 +166,9 @@ Four-strategy prompting (Kourani et al. 2024) in `js/src/llm-prompts.ts`: role, 
 
 `cd js/ && npm run build && npm pack --dry-run && npm publish`
 
+**Missing governance files**: CONTRIBUTING.md, CHANGELOG.md, CODE_OF_CONDUCT.md, SECURITY.md don't exist yet but are referenced in README.
+**License inconsistency**: SAAS.md says AGPL-3.0 but LICENSE file, Cargo.toml, and README all say Apache-2.0. SAAS.md needs fixing.
+
 ## Browser-Specific Issues
 
 | Issue | Fix |
@@ -195,6 +201,12 @@ Four-strategy prompting (Kourani et al. 2024) in `js/src/llm-prompts.ts`: role, 
 
 All docs use YAML frontmatter with `signal:` encoding.
 
+**README frontmatter pattern**: Uses Signal Theory encoding `S=(Mode, Genre, Type, Format, Structure)`. Preserve this pattern in rewrites.
+**Example**: `signal: S=(linguistic, overview, inform, markdown, navigation)`
+
 ## Project Identity
 
 **pm4wasm = pm4py + wasm** — NOT "POWL v2". `Powl` JS class name is historical; library covers all pm4py algorithms.
+
+**Scoped npm package**: `@seanchatmangpt/pm4wasm` (NOT `pm4wasm`) — use this name in all installation instructions.
+**Brand drift warning**: Some docs/ files still reference "POWL v2" in titles (INDEX.md, tutorial.md, architecture.md, vision-2030.md). This is legacy naming to be fixed.
